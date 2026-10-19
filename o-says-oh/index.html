@@ -1,0 +1,555 @@
+<title>O says Oh!</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
+<style>
+  /* Layout: one screen, like a toy. Top bar, then the board where O hops, then the command tray, then big arrow buttons. */
+  /* One look on purpose: O's lavender world, the same in light and dark. */
+  :root {
+    color-scheme: light;
+    --sky: #EADFFC;        /* page background, matches O's photo */
+    --sky-deep: #D4C1F6;   /* board frame, empty slots */
+    --cream: #FFF6E6;      /* board tiles, O's fluffy color */
+    --plum: #4A2378;       /* text */
+    --grape: #8B52DB;      /* arrows and accent, like O's bow */
+    --gold: #F4B637;       /* the star */
+    --blush: #F49BB6;      /* cheeks, "oops" color */
+    --go: #2FB57E;         /* the Go button */
+    --white: #FFFFFF;
+    --display: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+    --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--sky);
+    color: var(--plum);
+    font-family: var(--body);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; touch-action: manipulation; }
+  button:focus-visible { outline: 4px solid var(--plum); outline-offset: 3px; }
+  button:disabled { cursor: default; }
+  svg { display: block; }
+
+  .screen {
+    height: 100%;
+    box-sizing: border-box;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 12px;
+  }
+
+  /* ---------- Start screen ---------- */
+  #start { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+  #start img { height: min(46vh, 340px); width: auto; animation: bob 2.4s ease-in-out infinite; filter: drop-shadow(0 18px 14px rgb(74 35 120 / .18)); }
+  #start h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 12vw, 76px); line-height: .95; margin: 8px 0 0; letter-spacing: -.01em; }
+  #start h1 em { font-style: normal; color: var(--grape); }
+  #start p { font-size: 20px; margin: 0 0 14px; font-weight: 600; }
+  .big-play {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--go); color: var(--white);
+    font-family: var(--display); font-weight: 800; font-size: 30px;
+    padding: 12px 40px 10px 30px; border-radius: 999px;
+    box-shadow: 0 7px 0 #1D8A5D;
+    transition: transform .1s, box-shadow .1s;
+  }
+  .big-play:active { transform: translateY(5px); box-shadow: 0 2px 0 #1D8A5D; }
+  .big-play svg { width: 34px; height: 34px; }
+
+  /* ---------- Game screen ---------- */
+  #game { display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; max-width: 640px; margin: 0 auto; }
+
+  .bar { display: flex; align-items: center; gap: 10px; }
+  .dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .dot {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--sky-deep); color: var(--plum);
+    font-family: var(--display); font-weight: 800; font-size: 17px; line-height: 36px;
+  }
+  .dot.done { background: var(--gold); color: var(--plum); }
+  .dot.here { background: var(--grape); color: var(--white); box-shadow: 0 0 0 3px var(--white); }
+  .dot:disabled { opacity: .45; }
+  .icon-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--white); display: grid; place-items: center;
+    box-shadow: 0 3px 0 var(--sky-deep);
+  }
+  .icon-btn svg { width: 26px; height: 26px; }
+  .icon-btn[aria-pressed="false"] { opacity: .5; }
+
+  .stage { position: relative; display: grid; place-items: center; min-height: 0; padding-top: 78px; }
+  .board-wrap {
+    position: relative;
+    width: min(100%, 520px, calc((100dvh - 390px) * var(--ratio, 1)));
+    min-width: 150px;
+  }
+  #board {
+    display: grid; grid-template-columns: repeat(var(--cols), 1fr);
+    gap: 6px; padding: 6px; border-radius: 22px;
+    background: var(--sky-deep);
+  }
+  .cell { aspect-ratio: 1; border-radius: 14px; background: var(--cream); display: grid; place-items: center; }
+  .cell.wall { background: transparent; }
+  .cell svg { width: 78%; height: 78%; }
+  .cell .star { animation: twinkle 1.6s ease-in-out infinite; }
+
+  /* O sits on top of the board and slides from cell to cell */
+  #hero {
+    position: absolute; left: 6px; top: 6px;
+    width: calc((100% - 12px - (var(--cols) - 1) * 6px) / var(--cols));
+    aspect-ratio: 1;
+    transition: transform .42s cubic-bezier(.3,.7,.4,1);
+    z-index: 2; pointer-events: none;
+  }
+  #hero .body { position: absolute; inset: -14% 4% 4%; }
+  #hero img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; filter: drop-shadow(0 6px 4px rgb(74 35 120 / .25)); transition: scale .2s; }
+  #hero.left img { scale: -1 1; }
+  #hero.hop img { animation: hop .42s ease-out; }
+  #hero.bump img { animation: bump .5s ease-in-out; }
+  #hero.cheer img { animation: cheer .6s ease-in-out 3; }
+
+  .bubble {
+    position: absolute; bottom: calc(100% + 14px); left: 50%;
+    translate: calc(-50% + var(--shift, 0px)) 0; width: max-content; max-width: min(78vw, 300px);
+    background: var(--white); color: var(--plum);
+    font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.1; text-align: center;
+    padding: 9px 16px 7px; border-radius: 20px;
+    box-shadow: 0 4px 0 var(--sky-deep);
+    opacity: 0; scale: .6; transition: opacity .18s, scale .25s cubic-bezier(.3,1.6,.5,1);
+    z-index: 3;
+  }
+  .bubble::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--shift, 0px)); translate: -50% -1px; border: 10px solid transparent; border-top-color: var(--white); }
+  .bubble.show { opacity: 1; scale: 1; }
+  .bubble.huge { font-size: 46px; padding: 6px 22px 2px; }
+
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
+
+  /* the program: a row of arrow tiles */
+  .tray {
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-content: center;
+    min-height: 58px; padding: 8px; border-radius: 18px;
+    background: var(--white); box-shadow: inset 0 0 0 3px var(--sky-deep);
+  }
+  .tile {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--grape); color: var(--white); display: grid; place-items: center;
+    animation: pop .2s cubic-bezier(.3,1.6,.5,1);
+  }
+  .tile svg { width: 30px; height: 30px; }
+  .tile.now { background: var(--gold); color: var(--plum); scale: 1.14; }
+  .tile.oops { background: var(--blush); color: var(--plum); animation: shake .4s; }
+  .tray .hint { align-self: center; display: flex; gap: 8px; align-items: center; opacity: .55; font-weight: 800; font-size: 18px; }
+  .tray .hint i { width: 44px; height: 44px; border-radius: 12px; border: 3px dashed var(--sky-deep); display: block; box-sizing: border-box; }
+
+  .pad { display: grid; grid-template-columns: repeat(4, 1fr) 1.2fr; gap: 8px; padding-bottom: 4px; }
+  .arrow, .go, .undo {
+    height: 66px; border-radius: 18px; display: grid; place-items: center;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .arrow { background: var(--grape); color: var(--white); box-shadow: 0 6px 0 #6431AE; }
+  .arrow svg { width: 40px; height: 40px; }
+  .arrow:active:not(:disabled), .go:active:not(:disabled), .undo:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--sh, #6431AE); }
+  .go { --sh: #1D8A5D; background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--sh); font-family: var(--display); font-weight: 800; font-size: 28px; }
+  .go svg { width: 34px; height: 34px; }
+  .go.nudge { animation: nudge .9s ease-in-out 2; }
+  .tools { display: flex; justify-content: center; gap: 10px; }
+  .undo { --sh: var(--sky-deep); height: 46px; padding: 0 16px; background: var(--white); color: var(--plum); box-shadow: 0 4px 0 var(--sh); display: flex; gap: 6px; font-weight: 800; font-size: 16px; }
+  .undo svg { width: 24px; height: 24px; }
+  .pad button:disabled, .tools button:disabled { opacity: .45; }
+
+  /* win card */
+  .card-back { position: fixed; inset: 0; background: rgb(74 35 120 / .35); display: grid; place-items: center; z-index: 10; padding: 16px; }
+  .card {
+    background: var(--cream); border-radius: 28px; padding: 22px 26px 26px; text-align: center;
+    box-shadow: 0 10px 0 var(--sky-deep); animation: pop .35s cubic-bezier(.3,1.6,.5,1);
+    display: grid; gap: 10px; justify-items: center; max-width: 340px;
+  }
+  .card img { height: 150px; width: auto; animation: cheer .6s ease-in-out 2; }
+  .card h2 { font-family: var(--display); font-weight: 800; font-size: 44px; margin: 0; line-height: 1; }
+  .card .stars { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .card .stars svg { width: 30px; height: 30px; }
+
+  @keyframes bob { 50% { transform: translateY(-14px) rotate(-3deg); } }
+  @keyframes twinkle { 50% { transform: scale(1.12) rotate(8deg); } }
+  @keyframes hop { 40% { translate: 0 -30%; } }
+  @keyframes bump { 20% { rotate: -12deg; } 45% { rotate: 10deg; } 70% { rotate: -6deg; } }
+  @keyframes cheer { 30% { translate: 0 -22%; rotate: -8deg; } 60% { translate: 0 0; rotate: 6deg; } }
+  @keyframes pop { from { scale: .3; opacity: 0; } }
+  @keyframes shake { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
+  @keyframes nudge { 50% { transform: scale(1.1); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .05s !important; }
+  }
+  @media (max-width: 420px) {
+    .dots { gap: 4px; }
+    .dot { width: 27px; height: 27px; font-size: 14px; line-height: 29px; }
+    .arrow, .go { height: 58px; }
+    .arrow svg { width: 34px; height: 34px; }
+    .go { font-size: 22px; }
+    .tile { width: 38px; height: 38px; }
+    .tile svg { width: 26px; height: 26px; }
+  }
+</style>
+
+<section id="start" class="screen">
+  <img src="o.webp" alt="O, a fluffy letter O with a purple bow and backpack, waving">
+  <h1>O says <em>Oh!</em></h1>
+  <p>Help O hop to the star</p>
+  <button class="big-play" id="playBtn" type="button" aria-label="Play">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+    Play
+  </button>
+</section>
+
+<main id="game" class="screen" hidden>
+  <div class="bar">
+    <div class="dots" id="dots" aria-label="Levels"></div>
+    <button class="icon-btn" id="sayBtn" type="button" aria-label="Hear what to do">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+    </button>
+    <button class="icon-btn" id="soundBtn" type="button" aria-label="Sound on" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>
+    </button>
+  </div>
+
+  <div class="stage">
+    <div class="board-wrap" id="boardWrap">
+      <div id="board"></div>
+      <div id="hero">
+        <div class="bubble" id="bubble" aria-live="polite"></div>
+        <div class="body"><img src="o.webp" alt="O"></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="tray" id="tray" aria-label="O's steps"></div>
+    <div class="tools" style="margin-top:8px">
+      <button class="undo" id="undoBtn" type="button" aria-label="Take away the last step">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        Back
+      </button>
+      <button class="undo" id="clearBtn" type="button" aria-label="Take away all steps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="pad">
+    <button class="arrow" data-dir="left" type="button" aria-label="Left"></button>
+    <button class="arrow" data-dir="up" type="button" aria-label="Up"></button>
+    <button class="arrow" data-dir="down" type="button" aria-label="Down"></button>
+    <button class="arrow" data-dir="right" type="button" aria-label="Right"></button>
+    <button class="go" id="goBtn" type="button" aria-label="Go">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+    </button>
+  </div>
+</main>
+
+<div class="card-back" id="winCard" hidden>
+  <div class="card">
+    <img src="o.webp" alt="">
+    <h2 id="winTitle">Oh!</h2>
+    <div class="stars" id="winStars"></div>
+    <button class="big-play" id="nextBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+      <span id="nextLabel">Next</span>
+    </button>
+  </div>
+</div>
+
+<canvas id="fx"></canvas>
+
+<script>
+// ===== LEVELS =====
+// Each map is a little picture of the board:
+//   O = where O starts    * = the star    # = a bush O can't hop through    . = grass
+// Add a new level by adding a new map here. That's it!
+const LEVELS = [
+  { map: ["O.*"],                                         say: "Help O get the star! Tap the arrows, then press Go." },
+  { map: ["O...*"],                                       say: "The star is far away. How many hops?" },
+  { map: ["*", ".", "O"],                                 say: "Up, up, up!" },
+  { map: ["...*", "O..."],                                say: "Go across, then up." },
+  { map: ["..#*", "..#.", "O..."],                        say: "Watch out for the bushes!" },
+  { map: ["*#..", ".#.#", "...O"],                        say: "Find the way around." },
+  { map: ["O.#..", "#...#", "..#.*"],                     say: "A twisty path!" },
+  { map: ["O...#", "###..", "*..#.", ".#..."],            say: "The big one! Can you do it?" },
+];
+const MAX_STEPS = 14;
+
+const DIRS = {
+  up:    { dc: 0,  dr: -1, rot: -90, note: 660 },
+  down:  { dc: 0,  dr: 1,  rot: 90,  note: 440 },
+  left:  { dc: -1, dr: 0,  rot: 180, note: 523 },
+  right: { dc: 1,  dr: 0,  rot: 0,   note: 587 },
+};
+
+const $ = id => document.getElementById(id);
+const arrowSvg = rot => `<svg viewBox="0 0 24 24" style="rotate:${rot}deg" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14M13 6l6 6-6 6"/></svg>`;
+const starSvg = (cls = "") => `<svg class="${cls}" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#F4B637" stroke="#C98A12" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+const emptyStarSvg = `<svg viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#D4C1F6"/></svg>`;
+const bushSvg = `<svg viewBox="0 0 40 40"><g fill="#7C4BC4"><circle cx="13" cy="24" r="10"/><circle cx="27" cy="24" r="10"/><circle cx="20" cy="15" r="11"/></g><g fill="#A57AE6"><circle cx="16" cy="13" r="3.5"/><circle cx="10" cy="22" r="2.6"/></g><g fill="#F49BB6"><circle cx="26" cy="20" r="2.4"/><circle cx="19" cy="27" r="2.4"/><circle cx="29" cy="28" r="2"/></g></svg>`;
+
+// ===== STATE =====
+let levelIndex = 0, level = null, program = [], running = false;
+let done = new Set();
+let soundOn = true;
+try { done = new Set(JSON.parse(localStorage.getItem("oSaysOh.done") || "[]")); } catch (e) {}
+function saveProgress() { try { localStorage.setItem("oSaysOh.done", JSON.stringify([...done])); } catch (e) {} }
+
+// ===== SOUND =====
+let audio = null;
+function tone(freq, dur = .12, type = "sine", vol = .18, when = 0) {
+  if (!soundOn) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime + when, o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + .02);
+  } catch (e) {}
+}
+const sfx = {
+  tap: n => tone(n, .1, "triangle"),
+  step: () => tone(330, .08, "sine", .12),
+  bump: () => { tone(160, .25, "sawtooth", .08); tone(120, .3, "sawtooth", .06, .1); },
+  win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, "triangle", .16, i * .11)),
+};
+function speak(text) {
+  if (!soundOn || !("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = .9; u.pitch = 1.5;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// ===== O TALKS =====
+let bubbleTimer;
+function say(text, { huge = false, ms = 2600, voice = text } = {}) {
+  const b = $("bubble");
+  b.textContent = text;
+  b.classList.toggle("huge", huge);
+  b.classList.add("show");
+  // keep the bubble on screen when O stands near an edge; the tail still points at O
+  b.style.setProperty("--shift", "0px");
+  const hero = $("hero").getBoundingClientRect(), half = b.offsetWidth / 2, pad = 8;
+  const mid = hero.left + hero.width / 2;
+  const shift = Math.max(pad - (mid - half), Math.min(0, innerWidth - pad - (mid + half)));
+  b.style.setProperty("--shift", shift + "px");
+  clearTimeout(bubbleTimer);
+  if (ms) bubbleTimer = setTimeout(() => b.classList.remove("show"), ms);
+  speak(voice);
+}
+
+// ===== BOARD =====
+function loadLevel(i) {
+  levelIndex = i;
+  const map = LEVELS[i].map;
+  level = { rows: map.length, cols: map[0].length, walls: new Set(), start: null, goal: null };
+  const board = $("board");
+  board.innerHTML = "";
+  map.forEach((row, r) => [...row].forEach((ch, c) => {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    if (ch === "#") { cell.classList.add("wall"); cell.innerHTML = bushSvg; level.walls.add(c + "," + r); }
+    if (ch === "*") { cell.innerHTML = starSvg("star"); level.goal = { c, r }; }
+    if (ch === "O") level.start = { c, r };
+    board.appendChild(cell);
+  }));
+  $("boardWrap").style.setProperty("--cols", level.cols);
+  $("boardWrap").style.setProperty("--ratio", level.cols / level.rows);
+  program = [];
+  setRunning(false);
+  moveHero(level.start, false);
+  $("hero").classList.remove("left");
+  setTimeout(() => say(LEVELS[i].say, { ms: 4200 }), 350);
+}
+
+function moveHero({ c, r }, hop = true) {
+  const hero = $("hero");
+  if (!hop) hero.style.transition = "none";
+  // each step is one cell plus the 6px gap between cells
+  hero.style.transform = `translate(calc(${c} * (100% + 6px)), calc(${r} * (100% + 6px)))`;
+  if (!hop) { hero.offsetWidth; hero.style.transition = ""; }
+  else { hero.classList.remove("hop"); hero.offsetWidth; hero.classList.add("hop"); }
+}
+
+function renderDots() {
+  const best = Math.max(-1, ...done);
+  $("dots").innerHTML = LEVELS.map((_, i) => {
+    const cls = ["dot", done.has(i) ? "done" : "", i === levelIndex ? "here" : ""].join(" ");
+    const open = i <= best + 1 || done.has(i);
+    return `<button class="${cls}" type="button" data-level="${i}" aria-label="Level ${i + 1}" ${open ? "" : "disabled"}>${i + 1}</button>`;
+  }).join("");
+}
+
+function renderTray() {
+  const tray = $("tray");
+  if (!program.length) {
+    tray.innerHTML = `<span class="hint"><i></i>Tap an arrow</span>`;
+  } else {
+    tray.innerHTML = program.map((d, i) =>
+      `<button class="tile" type="button" data-i="${i}" aria-label="${d}, tap to remove">${arrowSvg(DIRS[d].rot)}</button>`).join("");
+  }
+  $("undoBtn").disabled = $("clearBtn").disabled = running || !program.length;
+}
+
+function setRunning(on) {
+  running = on;
+  document.querySelectorAll(".pad button, .dot").forEach(b => b.disabled = on);
+  if (!on) renderDots();
+  renderTray();
+}
+
+// ===== RUN THE PROGRAM =====
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function go() {
+  if (running) return;
+  if (!program.length) { say("Tap the arrows first!"); return; }
+  setRunning(true);
+  let { c, r } = level.start;
+  moveHero(level.start, false);
+  const tiles = () => $("tray").querySelectorAll(".tile");
+  await sleep(250);
+
+  for (let i = 0; i < program.length; i++) {
+    tiles().forEach(t => t.classList.remove("now"));
+    tiles()[i]?.classList.add("now");
+    const d = DIRS[program[i]];
+    $("hero").classList.toggle("left", d.dc < 0 ? true : d.dc > 0 ? false : $("hero").classList.contains("left"));
+    const nc = c + d.dc, nr = r + d.dr;
+    const blocked = nc < 0 || nr < 0 || nc >= level.cols || nr >= level.rows || level.walls.has(nc + "," + nr);
+    if (blocked) {
+      tiles()[i]?.classList.replace("now", "oops");
+      const hero = $("hero");
+      hero.classList.remove("bump"); hero.offsetWidth; hero.classList.add("bump");
+      sfx.bump();
+      say("Oh oh! Bump!", { ms: 1800 });
+      await sleep(1700);
+      return resetAfterMiss();
+    }
+    c = nc; r = nr;
+    moveHero({ c, r });
+    sfx.step();
+    await sleep(520);
+    if (c === level.goal.c && r === level.goal.r) return win();
+  }
+  say("Oh? Not there yet!", { ms: 1800 });
+  await sleep(1700);
+  resetAfterMiss();
+}
+
+function resetAfterMiss() {
+  moveHero(level.start, false);
+  $("hero").classList.remove("left", "bump");
+  setRunning(false); // the steps stay, so kids can find and fix the wrong one
+}
+
+function win() {
+  const hero = $("hero");
+  hero.classList.remove("hop"); hero.classList.add("cheer");
+  sfx.win();
+  say("Oh!", { huge: true, ms: 1600, voice: "Ohhh!" });
+  confetti();
+  done.add(levelIndex);
+  saveProgress();
+  setTimeout(() => {
+    hero.classList.remove("cheer");
+    const last = levelIndex === LEVELS.length - 1;
+    $("winTitle").textContent = last ? "All the stars!" : "Oh! You did it!";
+    $("nextLabel").textContent = last ? "Again" : "Next";
+    $("winStars").innerHTML = LEVELS.map((_, i) => done.has(i) ? starSvg() : emptyStarSvg).join("");
+    $("winCard").hidden = false;
+    $("nextBtn").focus();
+    if (last) speak("Oh! You got all the stars!");
+  }, 1500);
+}
+
+// ===== CONFETTI =====
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("fx"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+  const colors = ["#F4B637", "#8B52DB", "#F49BB6", "#2FB57E", "#FFFFFF"];
+  const box = $("hero").getBoundingClientRect();
+  const bits = Array.from({ length: 110 }, () => ({
+    x: box.left + box.width / 2, y: box.top + box.height / 2,
+    vx: (Math.random() - .5) * 12, vy: -Math.random() * 13 - 4,
+    s: Math.random() * 7 + 5, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
+    c: colors[Math.floor(Math.random() * colors.length)], star: Math.random() < .25,
+  }));
+  let frames = 0;
+  (function tick() {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    bits.forEach(b => {
+      b.vy += .35; b.x += b.vx; b.y += b.vy; b.rot += b.vr;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot); ctx.fillStyle = b.c;
+      if (b.star) { ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? b.s * .45 : b.s; ctx.lineTo(Math.cos(k * Math.PI / 5) * rr, Math.sin(k * Math.PI / 5) * rr); } ctx.fill(); }
+      else ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2);
+      ctx.restore();
+    });
+    if (++frames < 150) requestAnimationFrame(tick); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+  })();
+}
+
+// ===== BUTTONS =====
+document.querySelectorAll(".arrow").forEach(btn => {
+  const d = btn.dataset.dir;
+  btn.innerHTML = arrowSvg(DIRS[d].rot);
+  btn.addEventListener("click", () => {
+    if (running) return;
+    if (program.length >= MAX_STEPS) { say("That's a lot of steps! Press Go."); return; }
+    program.push(d);
+    sfx.tap(DIRS[d].note);
+    renderTray();
+  });
+});
+$("tray").addEventListener("click", e => {
+  const t = e.target.closest(".tile");
+  if (!t || running) return;
+  program.splice(+t.dataset.i, 1);
+  sfx.tap(300);
+  renderTray();
+});
+$("undoBtn").addEventListener("click", () => { program.pop(); sfx.tap(300); renderTray(); });
+$("clearBtn").addEventListener("click", () => { program = []; sfx.tap(250); renderTray(); });
+$("goBtn").addEventListener("click", go);
+$("sayBtn").addEventListener("click", () => say(LEVELS[levelIndex].say, { ms: 4200 }));
+$("soundBtn").addEventListener("click", e => {
+  soundOn = !soundOn;
+  e.currentTarget.setAttribute("aria-pressed", soundOn);
+  e.currentTarget.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
+  if (!soundOn && "speechSynthesis" in window) speechSynthesis.cancel();
+});
+$("dots").addEventListener("click", e => {
+  const b = e.target.closest(".dot");
+  if (b && !running) loadLevel(+b.dataset.level);
+});
+$("nextBtn").addEventListener("click", () => {
+  $("winCard").hidden = true;
+  loadLevel(levelIndex === LEVELS.length - 1 ? 0 : levelIndex + 1);
+});
+$("playBtn").addEventListener("click", () => {
+  $("start").hidden = true;
+  $("game").hidden = false;
+  tone(523, .15, "triangle"); tone(784, .2, "triangle", .16, .1);
+  const firstOpen = LEVELS.findIndex((_, i) => !done.has(i));
+  loadLevel(firstOpen === -1 ? 0 : firstOpen);
+});
+
+// keyboard: arrow keys add steps, Enter or Space runs
+addEventListener("keydown", e => {
+  if ($("game").hidden || !$("winCard").hidden) return;
+  const map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
+  if (map[e.key]) { e.preventDefault(); document.querySelector(`.arrow[data-dir="${map[e.key]}"]`).click(); }
+  if (e.key === "Backspace") { e.preventDefault(); if (!running && program.length) $("undoBtn").click(); }
+});
+</script>
