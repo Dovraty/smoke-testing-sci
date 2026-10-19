@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Again and Again</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Layout: O talks on top, the board in the middle, then the loop box (a few arrows + "repeat x times"), then the arrow pad. */
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 32px; height: 32px; border-radius: 50%; background: var(--sky-deep); font-family: var(--display); font-weight: 800; font-size: 16px; line-height: 34px; }
+  .dot.done { background: var(--gold); }
+  .dot.here { background: var(--grape); color: var(--white); box-shadow: 0 0 0 3px var(--white); }
+  .dot:disabled { opacity: .45; }
+
+  .stage { display: grid; place-items: center; }
+  .board-wrap { position: relative; width: min(100%, 440px, calc((100dvh - 470px) * var(--ratio, 1))); min-width: 160px; }
+  #board { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 6px; border-radius: 22px; background: var(--sky-deep); }
+  .cell { aspect-ratio: 1; border-radius: 14px; background: var(--cream); display: grid; place-items: center; }
+  .cell.wall { background: transparent; }
+  .cell.trail { background: #F6E7FF; }
+  .cell svg { width: 78%; height: 78%; }
+  .cell .star { animation: twinkle 1.6s ease-in-out infinite; }
+  #hero {
+    position: absolute; left: 6px; top: 6px; z-index: 2; pointer-events: none;
+    width: calc((100% - 12px - (var(--cols) - 1) * 6px) / var(--cols)); aspect-ratio: 1;
+    transition: transform .36s cubic-bezier(.3,.7,.4,1);
+  }
+  #hero img { position: absolute; inset: -14% 4% 4%; width: 92%; height: 110%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; filter: drop-shadow(0 6px 4px rgb(74 35 120 / .25)); }
+  #hero.left img { scale: -1 1; }
+  #hero.hop img { animation: hop .36s ease-out; }
+  #hero.bump img { animation: wobble .5s ease-in-out; }
+
+  /* the loop box: arrows inside a "repeat" frame */
+  .loop {
+    border: 4px solid var(--grape); border-radius: 24px; background: var(--white);
+    padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .loop-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--grape); }
+  .loop-label svg { width: 26px; height: 26px; }
+  .slots { display: flex; gap: 8px; flex-wrap: wrap; }
+  .slot {
+    width: 54px; height: 54px; border-radius: 14px; border: 3px dashed var(--sky-deep);
+    display: grid; place-items: center; background: none; color: var(--white);
+  }
+  .slot.full { border: 0; background: var(--grape); animation: pop .2s cubic-bezier(.3,1.6,.5,1); }
+  .slot.now { background: var(--gold); color: var(--plum); scale: 1.1; }
+  .slot.oops { background: var(--blush); color: var(--plum); animation: shake .4s; }
+  .slot svg { width: 34px; height: 34px; }
+  .times { display: grid; grid-template-columns: 44px auto 44px; align-items: center; gap: 6px; }
+  .times button { width: 44px; height: 44px; border-radius: 50%; background: var(--sky); font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; color: var(--grape-dark); }
+  .times button:disabled { opacity: .4; }
+  .times output { font-family: var(--display); font-weight: 800; font-size: 36px; min-width: 2.2ch; text-align: center; color: var(--grape-dark); }
+  .round-badge { font-weight: 800; color: var(--plum-soft); font-size: 15px; margin-left: auto; }
+
+  .pad { display: grid; grid-template-columns: repeat(4, 1fr) 1.2fr; gap: 8px; }
+  .arrow, .go { height: 64px; border-radius: 18px; display: grid; place-items: center; transition: transform .08s, box-shadow .08s; }
+  .arrow { background: var(--grape); color: var(--white); box-shadow: 0 6px 0 var(--grape-dark); }
+  .arrow svg { width: 38px; height: 38px; }
+  .go { background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--go-dark); }
+  .go svg { width: 34px; height: 34px; }
+  .arrow:active:not(:disabled), .go:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--grape-dark); }
+  .pad button:disabled { opacity: .45; }
+  .tools { display: flex; justify-content: center; gap: 10px; }
+  .tools .btn.quiet { font-size: 17px; min-height: 44px; padding-inline: 16px; }
+
+  @keyframes twinkle { 50% { transform: scale(1.12) rotate(8deg); } }
+  @keyframes hop { 40% { translate: 0 -30%; } }
+  @media (max-width: 420px) {
+    .dot { width: 26px; height: 26px; font-size: 14px; line-height: 28px; }
+    .slot { width: 46px; height: 46px; }
+    .slot svg { width: 28px; height: 28px; }
+    .arrow, .go { height: 56px; }
+  }
+</style>
+</head>
+<body>
+<main class="screen">
+  <div class="bar">
+    <a class="icon-btn home-btn"></a>
+    <div class="grow dots" id="dots" aria-label="Levels"></div>
+    <button class="icon-btn say-btn" type="button"></button>
+    <button class="icon-btn sound-btn" type="button"></button>
+  </div>
+
+  <div class="talk">
+    <img class="o-img" id="oFace" src="o.webp" alt="O">
+    <div class="bubble" id="bubble" aria-live="polite">Hi!</div>
+  </div>
+
+  <div class="stage">
+    <div class="board-wrap" id="boardWrap">
+      <div id="board"></div>
+      <div id="hero"><img src="o.webp" alt=""></div>
+    </div>
+  </div>
+
+  <div class="loop" aria-label="Repeat box">
+    <div class="loop-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+      Repeat
+      <span class="round-badge" id="roundBadge"></span>
+    </div>
+    <div class="slots" id="slots"></div>
+    <div class="times">
+      <button type="button" id="less" aria-label="Fewer times">−</button>
+      <output id="times" aria-live="polite">×1</output>
+      <button type="button" id="more" aria-label="More times">+</button>
+    </div>
+  </div>
+
+  <div class="tools">
+    <button class="btn quiet" type="button" id="clearBtn">Clear</button>
+  </div>
+
+  <div class="pad">
+    <button class="arrow" data-dir="left" type="button" aria-label="Left"></button>
+    <button class="arrow" data-dir="up" type="button" aria-label="Up"></button>
+    <button class="arrow" data-dir="down" type="button" aria-label="Down"></button>
+    <button class="arrow" data-dir="right" type="button" aria-label="Right"></button>
+    <button class="go" id="goBtn" type="button" aria-label="Go"></button>
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+// ===== LEVELS =====
+// O = start, * = star, # = bush, . = grass.
+// "slots" is how many arrows fit in the repeat box. Fewer slots means you NEED to repeat.
+const LEVELS = [
+  { map: ["O....*"],                               slots: 1, say: "Only one arrow fits! Make it repeat to reach the star." },
+  { map: ["...*", "#...", "#..#", "O..#"],         slots: 2, say: "Stairs! Two arrows, then repeat." },
+  { map: ["O..#.", "#....", "..#.*"],              slots: 3, say: "Find the pattern, then repeat it." },
+  { map: ["..*", "#..", "...", "#.#", "O.#"],      slots: 3, say: "One more pattern. Look closely!" },
+  { map: ["O.#....", "#..#...", "##..#..", "###..#.", "####.*."], slots: 2, say: "The big staircase! How many times?" },
+];
+const MAX_TIMES = 6;
+const DIRS = {
+  up:    { dc: 0,  dr: -1, rot: -90, note: 660 },
+  down:  { dc: 0,  dr: 1,  rot: 90,  note: 440 },
+  left:  { dc: -1, dr: 0,  rot: 180, note: 523 },
+  right: { dc: 1,  dr: 0,  rot: 0,   note: 587 },
+};
+const arrowSvg = rot => `<svg viewBox="0 0 24 24" style="rotate:${rot}deg" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14M13 6l6 6-6 6"/></svg>`;
+const bushSvg = `<svg viewBox="0 0 40 40"><g fill="#7C4BC4"><circle cx="13" cy="24" r="10"/><circle cx="27" cy="24" r="10"/><circle cx="20" cy="15" r="11"/></g><g fill="#A57AE6"><circle cx="16" cy="13" r="3.5"/><circle cx="10" cy="22" r="2.6"/></g><g fill="#F49BB6"><circle cx="26" cy="20" r="2.4"/><circle cx="19" cy="27" r="2.4"/></g></svg>`;
+
+let li = 0, level, pattern = [], times = 1, running = false;
+let done = new Set(store.get("loopDone", []));
+
+function loadLevel(i) {
+  li = i;
+  const map = LEVELS[i].map;
+  level = { rows: map.length, cols: map[0].length, walls: new Set(), start: null, goal: null };
+  $("board").innerHTML = "";
+  map.forEach((row, r) => [...row].forEach((ch, c) => {
+    const cell = document.createElement("div");
+    cell.className = "cell"; cell.dataset.at = c + "," + r;
+    if (ch === "#") { cell.classList.add("wall"); cell.innerHTML = bushSvg; level.walls.add(c + "," + r); }
+    if (ch === "*") { cell.innerHTML = ICONS.star.replace("<svg", '<svg class="star"'); level.goal = { c, r }; }
+    if (ch === "O") level.start = { c, r };
+    $("board").appendChild(cell);
+  }));
+  $("boardWrap").style.setProperty("--cols", level.cols);
+  $("boardWrap").style.setProperty("--ratio", level.cols / level.rows);
+  pattern = []; times = 1;
+  setRunning(false);
+  resetHero();
+  say("bubble", LEVELS[i].say);
+}
+
+function resetHero() {
+  clearTrail();
+  moveHero(level.start, false);
+  $("hero").classList.remove("left", "bump");
+}
+function moveHero({ c, r }, hop = true) {
+  const h = $("hero");
+  if (!hop) h.style.transition = "none";
+  h.style.transform = `translate(calc(${c} * (100% + 6px)), calc(${r} * (100% + 6px)))`;
+  if (!hop) { h.offsetWidth; h.style.transition = ""; }
+  else { h.classList.remove("hop"); h.offsetWidth; h.classList.add("hop"); }
+}
+function clearTrail() { document.querySelectorAll(".cell.trail").forEach(c => c.classList.remove("trail")); }
+
+function paint(now = -1, oops = -1) {
+  const n = LEVELS[li].slots, cells = [];
+  for (let i = 0; i < n; i++) {
+    const d = pattern[i];
+    const cls = ["slot", d ? "full" : "", i === now ? "now" : "", i === oops ? "oops" : ""].join(" ");
+    cells.push(`<button type="button" class="${cls}" data-i="${i}" aria-label="${d ? d + ", tap to remove" : "empty"}" ${running ? "disabled" : ""}>${d ? arrowSvg(DIRS[d].rot) : ""}</button>`);
+  }
+  $("slots").innerHTML = cells.join("");
+  $("times").textContent = "×" + times;
+  $("less").disabled = running || times <= 1;
+  $("more").disabled = running || times >= MAX_TIMES;
+  document.querySelectorAll(".arrow").forEach(b => b.disabled = running || pattern.length >= n);
+  $("goBtn").disabled = running;
+  $("clearBtn").disabled = running || !pattern.length;
+  const best = Math.max(-1, ...done);
+  $("dots").innerHTML = LEVELS.map((_, i) => `<button class="dot ${done.has(i) ? "done" : ""} ${i === li ? "here" : ""}" type="button" data-level="${i}" aria-label="Level ${i + 1}" ${running || (i > best + 1 && !done.has(i)) ? "disabled" : ""}>${i + 1}</button>`).join("");
+}
+function setRunning(on) { running = on; if (!on) $("roundBadge").textContent = ""; paint(); }
+
+async function go() {
+  if (running) return;
+  if (!pattern.length) { say("bubble", "Put an arrow in the repeat box first!"); return; }
+  setRunning(true);
+  resetHero();
+  let { c, r } = level.start;
+  await sleep(250);
+  for (let t = 0; t < times; t++) {
+    $("roundBadge").textContent = `${t + 1} of ${times}`;
+    tone(392 + t * 60, .15, "sine", .1);
+    for (let i = 0; i < pattern.length; i++) {
+      paint(i);
+      const d = DIRS[pattern[i]];
+      if (d.dc) $("hero").classList.toggle("left", d.dc < 0);
+      const nc = c + d.dc, nr = r + d.dr;
+      if (nc < 0 || nr < 0 || nc >= level.cols || nr >= level.rows || level.walls.has(nc + "," + nr)) {
+        paint(-1, i);
+        $("hero").classList.remove("bump"); $("hero").offsetWidth; $("hero").classList.add("bump");
+        buzz(); animateO("oFace", "oops");
+        say("bubble", "Oh oh! Bump!", "Oh oh! Bump! Try a different pattern or number.");
+        await sleep(1800);
+        resetHero(); setRunning(false); return;
+      }
+      document.querySelector(`.cell[data-at="${c},${r}"]`)?.classList.add("trail");
+      c = nc; r = nr;
+      moveHero({ c, r }); tone(330 + i * 40, .08, "sine", .1);
+      await sleep(420);
+      if (c === level.goal.c && r === level.goal.r) return win();
+    }
+  }
+  say("bubble", "Oh? Not there yet! Repeat more?", "Oh? Not there yet! Should I repeat more times?");
+  await sleep(1800);
+  resetHero(); setRunning(false);
+}
+
+function win() {
+  chime(); confetti($("hero")); animateO("oFace", "cheer");
+  say("bubble", "Oh! Repeat is magic!", "Oh! I repeated your steps " + times + " times!");
+  done.add(li); store.set("loopDone", [...done]);
+  setTimeout(() => {
+    const last = li === LEVELS.length - 1;
+    showWin({
+      title: last ? "Loop master!" : "Oh! You did it!",
+      text: `Your ${pattern.length === 1 ? "arrow" : pattern.length + " arrows"} ran ${times} times. Repeating steps is called a loop.`,
+      stars: LEVELS.map((_, i) => done.has(i)),
+      again: last ? "Play again" : "Next",
+      onAgain: () => loadLevel(last ? 0 : li + 1),
+    });
+  }, 1400);
+}
+
+// ===== BUTTONS =====
+document.querySelectorAll(".arrow").forEach(b => {
+  b.innerHTML = arrowSvg(DIRS[b.dataset.dir].rot);
+  b.addEventListener("click", () => {
+    if (running || pattern.length >= LEVELS[li].slots) return;
+    pattern.push(b.dataset.dir); tone(DIRS[b.dataset.dir].note); paint();
+    if (pattern.length === LEVELS[li].slots) say("bubble", "Now pick how many times!", "The box is full! Now pick how many times to repeat.");
+  });
+});
+$("slots").addEventListener("click", e => {
+  const s = e.target.closest(".slot.full");
+  if (!s || running) return;
+  pattern.splice(+s.dataset.i, 1); tone(300); paint();
+});
+$("less").addEventListener("click", () => { times = Math.max(1, times - 1); tone(440 - 20 * times); paint(); });
+$("more").addEventListener("click", () => { times = Math.min(MAX_TIMES, times + 1); tone(440 + 40 * times); paint(); });
+$("clearBtn").addEventListener("click", () => { pattern = []; tone(250); paint(); });
+$("goBtn").innerHTML = ICONS.play;
+$("goBtn").addEventListener("click", go);
+$("dots").addEventListener("click", e => { const d = e.target.closest(".dot"); if (d && !running) loadLevel(+d.dataset.level); });
+
+setupBar();
+const firstOpen = LEVELS.findIndex((_, i) => !done.has(i));
+loadLevel(firstOpen === -1 ? 0 : firstOpen);
+</script>
+</body>
+</html>

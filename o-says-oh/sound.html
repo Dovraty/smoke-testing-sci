@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>High or Low?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Layout: O asks a question, two sound cards side by side, each with its wave picture and a "This one!" button. */
+  .question { text-align: center; font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8vw, 44px); line-height: 1; }
+  .question em { font-style: normal; }
+  .question .high { color: var(--go-dark); }
+  .question .low { color: var(--grape-dark); }
+  .progress { display: flex; gap: 4px; }
+  .progress svg { width: 24px; height: 24px; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sound-card {
+    background: var(--white); border-radius: 24px; padding: 10px 10px 12px;
+    display: grid; gap: 10px; box-shadow: 0 6px 0 var(--sky-deep); position: relative;
+  }
+  .sound-card.right { box-shadow: 0 0 0 5px var(--go), 0 6px 0 var(--go-dark); }
+  .sound-card.wrong { animation: shake .4s; }
+  .listen {
+    border-radius: 18px; background: var(--sky); padding: 10px 6px 6px; display: grid; gap: 4px; justify-items: center;
+    font-weight: 800; font-size: 15px; color: var(--plum-soft);
+  }
+  .listen { overflow: hidden; }
+  .listen svg.wave { width: 100%; height: 90px; overflow: hidden; }
+  .listen .wave path { fill: none; stroke: var(--grape); stroke-width: 6; stroke-linecap: round; }
+  .listen.playing { background: #F1E8FF; }
+  .listen.playing .wave path { animation: wave .3s linear infinite; }
+  .listen .ear { display: flex; gap: 6px; align-items: center; }
+  .listen .ear svg { width: 22px; height: 22px; }
+  .pick {
+    min-height: 58px; border-radius: 18px; background: var(--go); color: var(--white);
+    font-family: var(--display); font-weight: 800; font-size: 22px; box-shadow: 0 5px 0 var(--go-dark);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .pick:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--go-dark); }
+  .pick:disabled { opacity: .45; }
+  .tag {
+    position: absolute; top: -12px; left: 50%; translate: -50% 0; padding: 3px 12px; border-radius: 999px;
+    font-weight: 800; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--white);
+    animation: pop .3s cubic-bezier(.3,1.6,.5,1);
+  }
+  .tag.high { background: var(--go-dark); }
+  .tag.low { background: var(--grape-dark); }
+  .wave-high path { stroke: var(--go) !important; }
+
+  .tip { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+  .tip svg { width: 92px; height: 40px; }
+  .tip p { margin: 0; font-weight: 700; font-size: 16px; line-height: 1.35; }
+  .tip b { color: var(--go-dark); }
+
+  @keyframes wave { to { transform: translateX(-12px); } }
+</style>
+</head>
+<body>
+<main class="screen">
+  <div class="bar">
+    <a class="icon-btn home-btn"></a>
+    <div class="grow progress" id="progress" aria-label="Rounds"></div>
+    <button class="icon-btn say-btn" type="button"></button>
+    <button class="icon-btn sound-btn" type="button"></button>
+  </div>
+
+  <div class="talk">
+    <img class="o-img" id="oFace" src="o.webp" alt="O">
+    <div class="bubble" id="bubble" aria-live="polite">Listen with me!</div>
+  </div>
+
+  <div class="question" id="question"></div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="panel tip">
+    <svg viewBox="0 0 92 40" aria-hidden="true"><path d="M2 20 Q8 4 14 20 T26 20 T38 20 T50 20 T62 20 T74 20 T86 20" fill="none" stroke="#2FB57E" stroke-width="4" stroke-linecap="round"/></svg>
+    <p>Sound is a wiggle in the air. <b>The closer the waves, the higher the sound!</b></p>
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+// Each round: two notes (in hertz, how fast the air wiggles) and the question.
+// Later rounds put the notes closer together, so they are harder to tell apart.
+const ROUNDS = [
+  { ask: "high", notes: [220, 880], teach: true },
+  { ask: "low",  notes: [262, 784] },
+  { ask: "high", notes: [330, 660] },
+  { ask: "low",  notes: [392, 659] },
+  { ask: "high", notes: [440, 587] },
+  { ask: "low",  notes: [494, 622] },
+];
+let ri = 0, order = [], firstTry = true, wins = [], locked = false;
+
+// Draw a wave: higher notes get more (closer) wiggles, like in O's video.
+function waveSvg(freq, high) {
+  const waves = Math.round(freq / 90) + 1, w = 200, h = 90, mid = h / 2, amp = 30;
+  let d = `M -12 ${mid}`;
+  const step = w / waves;
+  for (let i = -1; i <= waves; i++) {
+    const x = i * step;
+    d += ` Q ${x + step / 4} ${mid - amp} ${x + step / 2} ${mid} T ${x + step} ${mid}`;
+  }
+  return `<svg class="wave ${high ? "wave-high" : ""}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>`;
+}
+
+function playNote(freq, el) {
+  tone(freq, .9, "sine", .25);
+  tone(freq * 2, .9, "sine", .04);
+  if (el) { el.classList.add("playing"); setTimeout(() => el.classList.remove("playing"), 900); }
+}
+
+function paintProgress() {
+  $("progress").innerHTML = ROUNDS.map((_, i) => i < wins.length ? (wins[i] ? ICONS.star : ICONS.starEmpty) : `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="${i === ri ? "#8B52DB" : "#D4C1F6"}"/></svg>`).join("");
+}
+
+function loadRound(i) {
+  ri = i; firstTry = true; locked = false;
+  const r = ROUNDS[i];
+  order = Math.random() < .5 ? [...r.notes] : [...r.notes].reverse();
+  const hi = Math.max(...order);
+  $("question").innerHTML = `Which one sounds <em class="${r.ask}">${r.ask.toUpperCase()}?</em>`;
+  $("cards").innerHTML = order.map((f, k) => `
+    <div class="sound-card" id="card${k}">
+      ${r.teach ? `<span class="tag ${f === hi ? "high" : "low"}">${f === hi ? "High" : "Low"}</span>` : ""}
+      <button class="listen" type="button" data-k="${k}" aria-label="Listen to sound ${k + 1}">
+        ${waveSvg(f, r.teach && f === hi)}
+        <span class="ear">${ICONS.say}Listen</span>
+      </button>
+      <button class="pick" type="button" data-k="${k}">This one!</button>
+    </div>`).join("");
+  paintProgress();
+  if (r.teach) say("bubble", "Listen! Close waves sound high.", "Listen to both sounds. See the waves? Close waves make a high sound. Which one sounds high?");
+  else say("bubble", `Which one is ${r.ask}?`, `Listen to both. Which one sounds ${r.ask}?`);
+}
+
+$("cards").addEventListener("click", async e => {
+  const listen = e.target.closest(".listen");
+  if (listen) { playNote(order[+listen.dataset.k], listen); return; }
+  const pick = e.target.closest(".pick");
+  if (!pick || locked) return;
+  const k = +pick.dataset.k, r = ROUNDS[ri], hi = Math.max(...order);
+  const correct = (r.ask === "high") === (order[k] === hi);
+  playNote(order[k]);
+  if (correct) {
+    locked = true;
+    document.querySelectorAll(".pick").forEach(b => b.disabled = true);
+    $("card" + k).classList.add("right");
+    // show which is which, and color the high wave green like in the video
+    order.forEach((f, j) => {
+      const c = $("card" + j);
+      if (!c.querySelector(".tag")) c.insertAdjacentHTML("afterbegin", `<span class="tag ${f === hi ? "high" : "low"}">${f === hi ? "High" : "Low"}</span>`);
+      if (f === hi) c.querySelector(".wave").classList.add("wave-high");
+    });
+    wins.push(firstTry);
+    await sleep(500);
+    chime(); animateO("oFace", "cheer");
+    say("bubble", "Oh! You got it!", firstTry ? "Oh! You got it! The closer the waves, the higher the sound!" : "Oh! Yes, that one!");
+    paintProgress();
+    await sleep(2300);
+    if (ri + 1 < ROUNDS.length) loadRound(ri + 1); else finish();
+  } else {
+    firstTry = false;
+    $("card" + k).classList.remove("wrong"); $("card" + k).offsetWidth; $("card" + k).classList.add("wrong");
+    buzz(); animateO("oFace", "oops");
+    say("bubble", "Hmm, listen again!", "Hmm, not that one. Listen to both again!");
+  }
+});
+
+function finish() {
+  const n = wins.filter(Boolean).length;
+  store.set("soundBest", Math.max(n, store.get("soundBest", 0)));
+  confetti($("oFace"));
+  say("bubble", `Oh! ${n} of ${ROUNDS.length} on the first try!`);
+  setTimeout(() => showWin({
+    title: "Super ears!",
+    text: "High sounds wiggle fast, so their waves are close together. Low sounds wiggle slowly.",
+    stars: wins,
+    onAgain: () => { wins = []; loadRound(0); },
+  }), 1200);
+}
+
+setupBar();
+loadRound(0);
+</script>
+</body>
+</html>

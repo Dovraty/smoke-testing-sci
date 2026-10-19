@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>O Reads Faces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Layout: O talks on top, a big face in the middle, answer buttons under it, and O's memory of faces at the bottom.
+     Part 2 swaps the answer buttons for a face builder. */
+  .phase { display: flex; gap: 8px; justify-content: center; }
+  .phase span { padding: 5px 14px; border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--sky-deep); color: var(--plum-soft); }
+  .phase span.on { background: var(--grape); color: var(--white); }
+  .big-face { width: min(210px, 52vw); margin: 0 auto; animation: pop .3s cubic-bezier(.3,1.6,.5,1); }
+  .feelings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .feel {
+    border-radius: 20px; padding: 8px 4px 6px; display: grid; justify-items: center; gap: 2px;
+    font-family: var(--display); font-weight: 800; font-size: 20px; transition: transform .08s, box-shadow .08s;
+  }
+  .feel svg { width: 52px; height: 52px; }
+  .feel.happy { background: #FFE7A8; box-shadow: 0 5px 0 #E2B23D; }
+  .feel.sad { background: #CFE4FB; box-shadow: 0 5px 0 #7FB1E3; }
+  .feel.surprised { background: #FBD3E0; box-shadow: 0 5px 0 var(--blush-dark); }
+  .feel:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
+  .feel:disabled { opacity: .45; }
+  .check { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check button { min-height: 68px; border-radius: 20px; font-family: var(--display); font-weight: 800; font-size: 24px; display: flex; gap: 8px; align-items: center; justify-content: center; }
+  .check svg { width: 32px; height: 32px; }
+  .check .yes { background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--go-dark); }
+  .check .no { background: var(--blush); color: var(--plum); box-shadow: 0 6px 0 var(--blush-dark); }
+  .check button:disabled { opacity: .45; }
+
+  .builder { display: grid; gap: 8px; }
+  .part { display: grid; grid-template-columns: 86px 1fr; gap: 8px; align-items: center; }
+  .part b { font-size: 15px; font-weight: 800; color: var(--plum-soft); text-transform: uppercase; letter-spacing: .06em; }
+  .opts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .opt { width: 54px; height: 54px; border-radius: 16px; background: var(--white); box-shadow: 0 3px 0 var(--sky-deep); display: grid; place-items: center; }
+  .opt svg { width: 46px; height: 46px; }
+  .opt[aria-pressed="true"] { box-shadow: 0 0 0 4px var(--grape); }
+
+  .memory .eyebrow { text-align: center; margin-bottom: 6px; }
+  .shelves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .shelf { border-radius: 14px; padding: 6px; min-height: 58px; display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; }
+  .shelf b { width: 100%; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--plum-soft); }
+  .shelf svg { width: 30px; height: 30px; animation: pop .3s cubic-bezier(.3,1.6,.5,1); }
+  .shelf.happy { background: #FFF1CC; } .shelf.sad { background: #E3EFFC; } .shelf.surprised { background: #FDE3EC; }
+  @media (max-width: 420px) { .part { grid-template-columns: 1fr; } .opt { width: 50px; height: 50px; } }
+</style>
+</head>
+<body>
+<main class="screen">
+  <div class="bar">
+    <a class="icon-btn home-btn"></a>
+    <div class="grow phase"><span id="ph1" class="on">1. Teach</span><span id="ph2">2. Test</span></div>
+    <button class="icon-btn say-btn" type="button"></button>
+    <button class="icon-btn sound-btn" type="button"></button>
+  </div>
+
+  <div class="talk">
+    <img class="o-img" id="oFace" src="o.webp" alt="O">
+    <div class="bubble" id="bubble" aria-live="polite">Hi!</div>
+  </div>
+
+  <div id="faceBox"></div>
+  <div id="controls"></div>
+
+  <div class="panel memory">
+    <div class="eyebrow">Faces O remembers</div>
+    <div class="shelves">
+      <div class="shelf happy" id="memHappy"><b>Happy</b></div>
+      <div class="shelf sad" id="memSad"><b>Sad</b></div>
+      <div class="shelf surprised" id="memSurprised"><b>Surprised</b></div>
+    </div>
+  </div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+// ===== DRAWING A FACE =====
+// A face is 3 parts: mouth, eyebrows, eyes. That's all O can "see".
+const PARTS = {
+  mouth: { smile: "Smile", frown: "Frown", open: "Open", flat: "Flat" },
+  brows: { flat: "Flat", up: "Up", worried: "Worried" },
+  eyes:  { normal: "Dots", wide: "Wide", closed: "Closed" },
+};
+function faceSvg({ mouth, brows, eyes }, cls = "") {
+  const P = 'stroke="#4A2378" stroke-width="4.5" stroke-linecap="round" fill="none"';
+  const eyeSvg = {
+    normal: '<circle cx="36" cy="46" r="5.5" fill="#4A2378"/><circle cx="64" cy="46" r="5.5" fill="#4A2378"/>',
+    wide: '<circle cx="36" cy="46" r="9" fill="#fff" stroke="#4A2378" stroke-width="3"/><circle cx="64" cy="46" r="9" fill="#fff" stroke="#4A2378" stroke-width="3"/><circle cx="36" cy="46" r="4.5" fill="#4A2378"/><circle cx="64" cy="46" r="4.5" fill="#4A2378"/>',
+    closed: `<path d="M29 48 q7 -8 14 0" ${P}/><path d="M57 48 q7 -8 14 0" ${P}/>`,
+  }[eyes];
+  const browSvg = {
+    flat: `<path d="M28 32 h15" ${P}/><path d="M57 32 h15" ${P}/>`,
+    up: `<path d="M27 29 q8 -9 16 -1" ${P}/><path d="M57 28 q8 -8 16 1" ${P}/>`,
+    worried: `<path d="M28 34 L43 28" ${P}/><path d="M57 28 L72 34" ${P}/>`,
+  }[brows];
+  const mouthSvg = {
+    smile: `<path d="M35 66 q15 16 30 0" ${P}/>`,
+    frown: `<path d="M35 77 q15 -14 30 0" ${P}/>`,
+    open: '<ellipse cx="50" cy="72" rx="8" ry="10" fill="#4A2378"/><ellipse cx="50" cy="76" rx="5" ry="4" fill="#F49BB6"/>',
+    flat: `<path d="M38 72 h24" ${P}/>`,
+  }[mouth];
+  return `<svg class="${cls}" viewBox="0 0 100 100" role="img" aria-label="Face: ${PARTS.mouth[mouth]} mouth, ${PARTS.brows[brows]} eyebrows, ${PARTS.eyes[eyes]} eyes">
+    <circle cx="50" cy="52" r="45" fill="#FDE9C9" stroke="#E9CDA2" stroke-width="2"/>
+    <ellipse cx="24" cy="62" rx="8" ry="5" fill="#F49BB6" opacity=".55"/><ellipse cx="76" cy="62" rx="8" ry="5" fill="#F49BB6" opacity=".55"/>
+    ${browSvg}${eyeSvg}${mouthSvg}</svg>`;
+}
+const FEELINGS = {
+  happy:     { label: "Happy",     icon: { mouth: "smile", brows: "flat", eyes: "closed" } },
+  sad:       { label: "Sad",       icon: { mouth: "frown", brows: "worried", eyes: "normal" } },
+  surprised: { label: "Surprised", icon: { mouth: "open",  brows: "up", eyes: "wide" } },
+};
+
+// ===== O'S BRAIN =====
+// O never gets rules like "a smile means happy". O only remembers the faces you labeled,
+// and guesses a new face by finding the remembered faces that look the most alike.
+const TEACH = [
+  { mouth: "smile", brows: "flat",    eyes: "normal" },
+  { mouth: "frown", brows: "worried", eyes: "normal" },
+  { mouth: "open",  brows: "up",      eyes: "wide" },
+  { mouth: "frown", brows: "worried", eyes: "closed" },
+  { mouth: "smile", brows: "up",      eyes: "closed" },
+  { mouth: "open",  brows: "up",      eyes: "normal" },
+];
+const TESTS = 4;
+let memory = [], step = 0, phase = "teach", score = [], current = null, guessed = null, busy = false;
+
+function similarity(a, b) {
+  return (a.mouth === b.mouth ? 2 : 0) + (a.brows === b.brows ? 1 : 0) + (a.eyes === b.eyes ? 1 : 0);
+}
+function guessFeeling(face) {
+  let best = 0, votes = {};
+  for (const m of memory) {
+    const s = similarity(face, m);
+    if (s > best) { best = s; votes = {}; }
+    if (s === best) votes[m.feeling] = (votes[m.feeling] || 0) + 1;
+  }
+  if (best < 2) return null; // nothing looks alike enough
+  const ranked = Object.entries(votes).sort((a, b) => b[1] - a[1]);
+  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) return null; // a tie: O is not sure
+  return ranked[0][0];
+}
+function paintMemory() {
+  for (const f of Object.keys(FEELINGS)) {
+    const id = "mem" + f[0].toUpperCase() + f.slice(1);
+    $(id).innerHTML = `<b>${FEELINGS[f].label}</b>` + memory.filter(m => m.feeling === f).map(m => faceSvg(m)).join("");
+  }
+}
+
+// ===== UI PIECES =====
+function showFace(face) { $("faceBox").innerHTML = `<div class="big-face">${faceSvg(face)}</div>`; }
+function feelingButtons(disabled = false) {
+  $("controls").innerHTML = `<div class="feelings">${Object.entries(FEELINGS).map(([k, f]) =>
+    `<button class="feel ${k}" type="button" data-feel="${k}" ${disabled ? "disabled" : ""}>${faceSvg(f.icon)}${f.label}</button>`).join("")}</div>`;
+}
+function checkButtons() {
+  $("controls").innerHTML = `<div class="check">
+    <button class="yes" type="button" data-check="1">${ICONS.yes}Right!</button>
+    <button class="no" type="button" data-check="0">${ICONS.no}Wrong</button></div>`;
+}
+function builder() {
+  const rows = Object.entries(PARTS).map(([part, opts]) => `
+    <div class="part"><b>${{ mouth: "Mouth", brows: "Eyebrows", eyes: "Eyes" }[part]}</b><div class="opts">
+      ${Object.keys(opts).map(o => `<button class="opt" type="button" data-part="${part}" data-val="${o}" aria-label="${opts[o]}" aria-pressed="${current[part] === o}">${faceSvg({ ...current, [part]: o })}</button>`).join("")}
+    </div></div>`).join("");
+  $("controls").innerHTML = `<div class="panel builder">${rows}</div>
+    <div class="row" style="margin-top:12px"><button class="btn glow" type="button" id="askBtn">What do you see, O?</button></div>`;
+}
+
+// ===== GAME FLOW =====
+function start() {
+  memory = []; step = 0; phase = "teach"; score = []; busy = false;
+  $("ph1").classList.add("on"); $("ph2").classList.remove("on");
+  paintMemory();
+  showFace(TEACH[0]); feelingButtons();
+  say("bubble", "Teach me faces! How does this one feel?", "I can't read faces yet. Teach me! How does this face feel?");
+}
+function startTest() {
+  phase = "build"; step = 0;
+  $("ph1").classList.remove("on"); $("ph2").classList.add("on");
+  current = { mouth: "flat", brows: "flat", eyes: "normal" };
+  showFace(current); builder();
+  say("bubble", "Now you make a face! I'll guess.", "Now it's my turn! Make a face with the buttons, and I'll guess how it feels.");
+}
+async function ask() {
+  busy = true; phase = "guess";
+  $("controls").innerHTML = "";
+  think("bubble");
+  await sleep(1200);
+  guessed = guessFeeling(current);
+  if (!guessed) {
+    phase = "unknown";
+    say("bubble", "Hmm, I'm not sure! How does it feel?", "Hmm, I never saw a face like this. How does it feel?");
+    feelingButtons();
+  } else {
+    say("bubble", `I think it's ${FEELINGS[guessed].label}!`, `I think this face is ${FEELINGS[guessed].label.toLowerCase()}! Am I right?`);
+    checkButtons();
+  }
+  busy = false;
+}
+async function afterTest(text, voice) {
+  step++;
+  say("bubble", text, voice);
+  await sleep(1700);
+  if (step >= TESTS) return finish();
+  phase = "build"; builder();
+  say("bubble", "Make another face!");
+}
+function finish() {
+  phase = "done";
+  const n = score.filter(Boolean).length;
+  store.set("facesBest", Math.max(n, store.get("facesBest", 0)));
+  confetti($("oFace"));
+  say("bubble", `Oh! I got ${n} of ${TESTS} right!`, `Oh! I got ${n} out of ${TESTS} right. I learned faces from you!`);
+  setTimeout(() => showWin({
+    title: "That's AI!",
+    text: "Nobody told O the rules. O learned faces from your examples. Real AI learns the same way, from lots and lots of examples.",
+    stars: score,
+    again: "Teach again",
+    onAgain: start,
+  }), 1500);
+}
+
+$("controls").addEventListener("click", async e => {
+  if (busy) return;
+  const feel = e.target.closest(".feel"), check = e.target.closest("[data-check]"), opt = e.target.closest(".opt");
+  if (opt) {
+    current[opt.dataset.part] = opt.dataset.val;
+    tone(500 + Math.random() * 200, .1);
+    showFace(current); builder(); return;
+  }
+  if (e.target.closest("#askBtn")) { tone(660); return ask(); }
+  if (feel && phase === "teach") {
+    busy = true;
+    memory.push({ ...TEACH[step], feeling: feel.dataset.feel });
+    tone(700); paintMemory(); feelingButtons(true);
+    step++;
+    if (step < TEACH.length) {
+      say("bubble", ["Got it!", "Oh, okay!", "I'll remember!"][step % 3]);
+      await sleep(800);
+      showFace(TEACH[step]); feelingButtons();
+      say("bubble", "And this one?");
+    } else {
+      say("bubble", "Thank you! I learned 6 faces.");
+      await sleep(1800);
+      startTest();
+    }
+    busy = false; return;
+  }
+  if (feel && phase === "unknown") {
+    busy = true;
+    memory.push({ ...current, feeling: feel.dataset.feel });
+    score.push(false); paintMemory();
+    await afterTest("Thanks! Now I know that one.");
+    busy = false; return;
+  }
+  if (check && phase === "guess") {
+    busy = true;
+    const ok = check.dataset.check === "1";
+    score.push(ok);
+    if (ok) {
+      memory.push({ ...current, feeling: guessed }); paintMemory();
+      chime(); animateO("oFace", "cheer");
+      await afterTest("Oh! Yay!", "Oh! Yay! I read your face!");
+    } else {
+      buzz(); animateO("oFace", "oops");
+      phase = "unknown";
+      say("bubble", "Oh oh! How does it feel?", "Oh oh! I got it wrong. Tell me, how does it feel?");
+      feelingButtons();
+      score.pop(); // the "unknown" answer below records this round
+    }
+    busy = false;
+  }
+});
+
+setupBar();
+start();
+</script>
+</body>
+</html>

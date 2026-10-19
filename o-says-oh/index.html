@@ -177,6 +177,7 @@
   .shelf h2 .tag { font-family: var(--body); font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; color: var(--white); }
   .tag.code { background: var(--grape); }
   .tag.ai { background: var(--go); }
+  .tag.sci { background: var(--gold); color: var(--plum); }
   .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
   .game {
     background: var(--white); border-radius: 24px; padding: 12px; text-align: left;
@@ -368,11 +369,15 @@
         <h3>Make O Dance</h3>
         <p>Pick 3 moves, press Go.</p>
       </button>
-      <div class="game soon" aria-disabled="true">
-        <div class="art" style="background: var(--sky-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="#6431AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></div>
+      <a class="game" href="loop.html">
+        <div class="art" style="background: var(--sky-deep)">
+          <div class="star-badge" id="loopStars"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6431AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:18px;top:30px"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
         <h3>Again and Again</h3>
-        <span class="soon-pill">Soon</span>
-      </div>
+        <p>Make a pattern, then repeat it. 5 levels.</p>
+      </a>
     </div>
   </div>
 
@@ -387,16 +392,31 @@
         <h3>Teach O</h3>
         <p>Show O examples. Can O learn?</p>
       </button>
-      <div class="game soon" aria-disabled="true">
-        <div class="art" style="background: rgb(47 181 126 / .16)"><svg viewBox="0 0 24 24" fill="none" stroke="#1D8A5D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg></div>
-        <h3>High or Low?</h3>
-        <span class="soon-pill">Soon</span>
-      </div>
-      <div class="game soon" aria-disabled="true">
-        <div class="art" style="background: rgb(47 181 126 / .16)"><svg viewBox="0 0 24 24" fill="none" stroke="#1D8A5D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></div>
+      <a class="game" href="faces.html">
+        <div class="art" style="background: rgb(47 181 126 / .16)">
+          <div class="star-badge" id="facesStars"></div>
+          <svg viewBox="0 0 100 100" style="position:absolute;left:14px;top:26px;width:66px;height:66px"><circle cx="50" cy="52" r="45" fill="#FDE9C9" stroke="#E9CDA2" stroke-width="2"/><path d="M27 29 q8 -9 16 -1M57 28 q8 -8 16 1" stroke="#4A2378" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="36" cy="46" r="5.5" fill="#4A2378"/><circle cx="64" cy="46" r="5.5" fill="#4A2378"/><path d="M35 66 q15 16 30 0" stroke="#4A2378" stroke-width="4.5" stroke-linecap="round" fill="none"/></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
         <h3>O Reads Faces</h3>
-        <span class="soon-pill">Soon</span>
-      </div>
+        <p>Teach O feelings, then make faces.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="shelf">
+    <h2>Sound lab <span class="tag sci">Science</span></h2>
+    <div class="games">
+      <a class="game" href="sound.html">
+        <div class="art" style="background: #FFF1CC">
+          <div class="star-badge" id="soundStars"></div>
+          <svg viewBox="0 0 92 40" style="position:absolute;left:12px;top:22px;width:92px;height:40px"><path d="M2 20 Q8 4 14 20 T26 20 T38 20 T50 20 T62 20 T74 20 T86 20" fill="none" stroke="#2FB57E" stroke-width="4" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 92 40" style="position:absolute;left:12px;top:62px;width:92px;height:40px"><path d="M2 20 Q16 2 30 20 T58 20 T86 20" fill="none" stroke="#8B52DB" stroke-width="4" stroke-linecap="round"/></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
+        <h3>High or Low?</h3>
+        <p>Listen and spot the high sound.</p>
+      </a>
     </div>
   </div>
 
@@ -663,9 +683,13 @@ $("aiAgain").addEventListener("click", startAI);
 
 // ===== MENU =====
 function paintMenu() {
-  let done = [];
-  try { done = JSON.parse(localStorage.getItem("oSaysOh.done") || "[]"); } catch (e) {}
-  $("hopStars").innerHTML = done.length ? ICONS.star + `<b style="font-family:var(--display);font-size:16px;line-height:22px">${done.length}/8</b>` : "";
+  const badge = (id, text) => { $(id).innerHTML = text ? ICONS.star + `<b style="font-family:var(--display);font-size:16px;line-height:22px">${text}</b>` : ""; };
+  const hop = store.get("done", []), loop = store.get("loopDone", []);
+  const sound = store.get("soundBest", 0), faces = store.get("facesBest", 0);
+  badge("hopStars", hop.length && hop.length + "/8");
+  badge("loopStars", loop.length && loop.length + "/5");
+  badge("soundStars", sound && sound + "/6");
+  badge("facesStars", faces && faces + "/4");
 }
 
 // Returning kids skip the intro and land on the games menu.
