@@ -2,309 +2,418 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
 <style>
-  /* Layout: one screen, like a toy. Top bar, then the board where O hops, then the command tray, then big arrow buttons. */
+  /* Layout: one screen at a time. Welcome -> "What is coding?" -> "What is AI?" -> games menu. */
   /* One look on purpose: O's lavender world, the same in light and dark. */
   :root {
     color-scheme: light;
-    --sky: #EADFFC;        /* page background, matches O's photo */
-    --sky-deep: #D4C1F6;   /* board frame, empty slots */
-    --cream: #FFF6E6;      /* board tiles, O's fluffy color */
-    --plum: #4A2378;       /* text */
-    --grape: #8B52DB;      /* arrows and accent, like O's bow */
-    --gold: #F4B637;       /* the star */
-    --blush: #F49BB6;      /* cheeks, "oops" color */
-    --go: #2FB57E;         /* the Go button */
+    --sky: #EADFFC;
+    --sky-deep: #D4C1F6;
+    --cream: #FFF6E6;
+    --plum: #4A2378;
+    --plum-soft: #6E4D99;
+    --grape: #8B52DB;
+    --grape-dark: #6431AE;
+    --gold: #F4B637;
+    --blush: #F49BB6;
+    --go: #2FB57E;
+    --go-dark: #1D8A5D;
     --white: #FFFFFF;
     --display: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
     --body: "Nunito", "Segoe UI", system-ui, sans-serif;
   }
   [hidden] { display: none !important; }
-  html, body { height: 100%; }
+  html, body { min-height: 100%; }
   body {
-    background: var(--sky);
-    color: var(--plum);
-    font-family: var(--body);
+    background: var(--sky); color: var(--plum); font-family: var(--body);
     -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    overflow: hidden;
   }
-  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; touch-action: manipulation; }
-  button:focus-visible { outline: 4px solid var(--plum); outline-offset: 3px; }
-  button:disabled { cursor: default; }
+  button, a.btn { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; touch-action: manipulation; text-decoration: none; }
+  button:focus-visible, a:focus-visible { outline: 4px solid var(--plum); outline-offset: 3px; }
   svg { display: block; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 800; margin: 0; text-wrap: balance; line-height: 1; }
 
   .screen {
-    height: 100%;
-    box-sizing: border-box;
+    max-width: 760px; margin: 0 auto; box-sizing: border-box; min-height: 100vh;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    padding-block: 12px;
+    padding-block: 14px 28px;
+    display: flex; flex-direction: column; gap: 16px;
   }
 
-  /* ---------- Start screen ---------- */
-  #start { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
-  #start img { height: min(46vh, 340px); width: auto; animation: bob 2.4s ease-in-out infinite; filter: drop-shadow(0 18px 14px rgb(74 35 120 / .18)); }
-  #start h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 12vw, 76px); line-height: .95; margin: 8px 0 0; letter-spacing: -.01em; }
-  #start h1 em { font-style: normal; color: var(--grape); }
-  #start p { font-size: 20px; margin: 0 0 14px; font-weight: 600; }
-  .big-play {
-    display: inline-flex; align-items: center; gap: 12px;
-    background: var(--go); color: var(--white);
-    font-family: var(--display); font-weight: 800; font-size: 30px;
-    padding: 12px 40px 10px 30px; border-radius: 999px;
-    box-shadow: 0 7px 0 #1D8A5D;
-    transition: transform .1s, box-shadow .1s;
-  }
-  .big-play:active { transform: translateY(5px); box-shadow: 0 2px 0 #1D8A5D; }
-  .big-play svg { width: 34px; height: 34px; }
-
-  /* ---------- Game screen ---------- */
-  #game { display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; max-width: 640px; margin: 0 auto; }
-
-  .bar { display: flex; align-items: center; gap: 10px; }
-  .dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
-  .dot {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--sky-deep); color: var(--plum);
-    font-family: var(--display); font-weight: 800; font-size: 17px; line-height: 36px;
-  }
-  .dot.done { background: var(--gold); color: var(--plum); }
-  .dot.here { background: var(--grape); color: var(--white); box-shadow: 0 0 0 3px var(--white); }
-  .dot:disabled { opacity: .45; }
+  /* top bar: steps of the intro, or the menu title */
+  .bar { display: flex; align-items: center; gap: 10px; min-height: 46px; }
+  .bar .grow { flex: 1; min-width: 0; }
+  .steps { display: flex; gap: 6px; align-items: center; }
+  .steps i { width: 30px; height: 8px; border-radius: 8px; background: var(--sky-deep); }
+  .steps i.on { background: var(--grape); }
   .icon-btn {
-    width: 46px; height: 46px; border-radius: 50%;
-    background: var(--white); display: grid; place-items: center;
+    width: 46px; height: 46px; border-radius: 50%; flex: none;
+    background: var(--white); display: grid; place-items: center; color: var(--plum);
     box-shadow: 0 3px 0 var(--sky-deep);
   }
   .icon-btn svg { width: 26px; height: 26px; }
   .icon-btn[aria-pressed="false"] { opacity: .5; }
 
-  .stage { position: relative; display: grid; place-items: center; min-height: 0; padding-top: 78px; }
-  .board-wrap {
-    position: relative;
-    width: min(100%, 520px, calc((100dvh - 390px) * var(--ratio, 1)));
-    min-width: 150px;
-  }
-  #board {
-    display: grid; grid-template-columns: repeat(var(--cols), 1fr);
-    gap: 6px; padding: 6px; border-radius: 22px;
-    background: var(--sky-deep);
-  }
-  .cell { aspect-ratio: 1; border-radius: 14px; background: var(--cream); display: grid; place-items: center; }
-  .cell.wall { background: transparent; }
-  .cell svg { width: 78%; height: 78%; }
-  .cell .star { animation: twinkle 1.6s ease-in-out infinite; }
-
-  /* O sits on top of the board and slides from cell to cell */
-  #hero {
-    position: absolute; left: 6px; top: 6px;
-    width: calc((100% - 12px - (var(--cols) - 1) * 6px) / var(--cols));
-    aspect-ratio: 1;
-    transition: transform .42s cubic-bezier(.3,.7,.4,1);
-    z-index: 2; pointer-events: none;
-  }
-  #hero .body { position: absolute; inset: -14% 4% 4%; }
-  #hero img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; filter: drop-shadow(0 6px 4px rgb(74 35 120 / .25)); transition: scale .2s; }
-  #hero.left img { scale: -1 1; }
-  #hero.hop img { animation: hop .42s ease-out; }
-  #hero.bump img { animation: bump .5s ease-in-out; }
-  #hero.cheer img { animation: cheer .6s ease-in-out 3; }
-
-  .bubble {
-    position: absolute; bottom: calc(100% + 14px); left: 50%;
-    translate: calc(-50% + var(--shift, 0px)) 0; width: max-content; max-width: min(78vw, 300px);
-    background: var(--white); color: var(--plum);
-    font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.1; text-align: center;
-    padding: 9px 16px 7px; border-radius: 20px;
-    box-shadow: 0 4px 0 var(--sky-deep);
-    opacity: 0; scale: .6; transition: opacity .18s, scale .25s cubic-bezier(.3,1.6,.5,1);
-    z-index: 3;
-  }
-  .bubble::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--shift, 0px)); translate: -50% -1px; border: 10px solid transparent; border-top-color: var(--white); }
-  .bubble.show { opacity: 1; scale: 1; }
-  .bubble.huge { font-size: 46px; padding: 6px 22px 2px; }
-
-  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
-
-  /* the program: a row of arrow tiles */
-  .tray {
-    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-content: center;
-    min-height: 58px; padding: 8px; border-radius: 18px;
-    background: var(--white); box-shadow: inset 0 0 0 3px var(--sky-deep);
-  }
-  .tile {
-    width: 44px; height: 44px; border-radius: 12px;
-    background: var(--grape); color: var(--white); display: grid; place-items: center;
-    animation: pop .2s cubic-bezier(.3,1.6,.5,1);
-  }
-  .tile svg { width: 30px; height: 30px; }
-  .tile.now { background: var(--gold); color: var(--plum); scale: 1.14; }
-  .tile.oops { background: var(--blush); color: var(--plum); animation: shake .4s; }
-  .tray .hint { align-self: center; display: flex; gap: 8px; align-items: center; opacity: .55; font-weight: 800; font-size: 18px; }
-  .tray .hint i { width: 44px; height: 44px; border-radius: 12px; border: 3px dashed var(--sky-deep); display: block; box-sizing: border-box; }
-
-  .pad { display: grid; grid-template-columns: repeat(4, 1fr) 1.2fr; gap: 8px; padding-bottom: 4px; }
-  .arrow, .go, .undo {
-    height: 66px; border-radius: 18px; display: grid; place-items: center;
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: var(--display); font-weight: 800; font-size: 26px;
+    padding: 10px 30px 8px; border-radius: 999px; min-height: 60px; box-sizing: border-box;
+    background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--go-dark);
     transition: transform .08s, box-shadow .08s;
   }
-  .arrow { background: var(--grape); color: var(--white); box-shadow: 0 6px 0 #6431AE; }
-  .arrow svg { width: 40px; height: 40px; }
-  .arrow:active:not(:disabled), .go:active:not(:disabled), .undo:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--sh, #6431AE); }
-  .go { --sh: #1D8A5D; background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--sh); font-family: var(--display); font-weight: 800; font-size: 28px; }
-  .go svg { width: 34px; height: 34px; }
-  .go.nudge { animation: nudge .9s ease-in-out 2; }
-  .tools { display: flex; justify-content: center; gap: 10px; }
-  .undo { --sh: var(--sky-deep); height: 46px; padding: 0 16px; background: var(--white); color: var(--plum); box-shadow: 0 4px 0 var(--sh); display: flex; gap: 6px; font-weight: 800; font-size: 16px; }
-  .undo svg { width: 24px; height: 24px; }
-  .pad button:disabled, .tools button:disabled { opacity: .45; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--go-dark); }
+  .btn svg { width: 28px; height: 28px; }
+  .btn.quiet { background: var(--white); color: var(--plum); box-shadow: 0 5px 0 var(--sky-deep); font-size: 20px; min-height: 52px; padding-inline: 22px; }
+  .btn.quiet:active { box-shadow: 0 2px 0 var(--sky-deep); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.glow { animation: nudge 1s ease-in-out infinite; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 
-  /* win card */
-  .card-back { position: fixed; inset: 0; background: rgb(74 35 120 / .35); display: grid; place-items: center; z-index: 10; padding: 16px; }
-  .card {
-    background: var(--cream); border-radius: 28px; padding: 22px 26px 26px; text-align: center;
-    box-shadow: 0 10px 0 var(--sky-deep); animation: pop .35s cubic-bezier(.3,1.6,.5,1);
-    display: grid; gap: 10px; justify-items: center; max-width: 340px;
+  /* O and her speech bubble */
+  .o-wrap { position: relative; display: grid; justify-items: center; }
+  .o-img { width: auto; height: 100%; filter: drop-shadow(0 12px 10px rgb(74 35 120 / .2)); transform-origin: 50% 100%; }
+  .bubble {
+    background: var(--white); color: var(--plum);
+    font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.15; text-align: center;
+    padding: 10px 18px 8px; border-radius: 22px; box-shadow: 0 4px 0 var(--sky-deep);
+    position: relative; max-width: 420px; margin-inline: auto;
   }
-  .card img { height: 150px; width: auto; animation: cheer .6s ease-in-out 2; }
-  .card h2 { font-family: var(--display); font-weight: 800; font-size: 44px; margin: 0; line-height: 1; }
-  .card .stars { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
-  .card .stars svg { width: 30px; height: 30px; }
+  .bubble::after { content: ""; position: absolute; top: 100%; left: 50%; translate: -50% -1px; border: 11px solid transparent; border-top-color: var(--white); }
+  .bubble.pop { animation: pop .3s cubic-bezier(.3,1.6,.5,1); }
 
-  @keyframes bob { 50% { transform: translateY(-14px) rotate(-3deg); } }
-  @keyframes twinkle { 50% { transform: scale(1.12) rotate(8deg); } }
-  @keyframes hop { 40% { translate: 0 -30%; } }
-  @keyframes bump { 20% { rotate: -12deg; } 45% { rotate: 10deg; } 70% { rotate: -6deg; } }
-  @keyframes cheer { 30% { translate: 0 -22%; rotate: -8deg; } 60% { translate: 0 0; rotate: 6deg; } }
-  @keyframes pop { from { scale: .3; opacity: 0; } }
-  @keyframes shake { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
-  @keyframes nudge { 50% { transform: scale(1.1); } }
+  /* ---------- Welcome ---------- */
+  .hero { display: grid; justify-items: center; text-align: center; gap: 10px; padding-top: 6px; }
+  .hero .o-img { height: min(36vh, 300px); animation: bob 2.6s ease-in-out infinite; }
+  .hero h1 { font-size: clamp(46px, 13vw, 84px); letter-spacing: -.01em; }
+  .hero h1 em { font-style: normal; color: var(--grape); }
+  .hero .lead { font-size: 21px; font-weight: 700; margin: 0; max-width: 30ch; }
+  .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .idea { background: var(--white); border-radius: 22px; padding: 14px 10px 12px; text-align: center; display: grid; gap: 6px; justify-items: center; }
+  .idea .pic { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; }
+  .idea .pic svg { width: 36px; height: 36px; }
+  .idea h3 { font-size: 21px; }
+  .idea p { margin: 0; font-size: 15px; font-weight: 700; color: var(--plum-soft); }
+  .grown-ups { background: var(--cream); border-radius: 22px; padding: 16px 20px; }
+  .grown-ups h2 { font-size: 22px; margin-bottom: 6px; }
+  .grown-ups p, .grown-ups li { font-size: 16px; line-height: 1.5; max-width: 62ch; }
+  .grown-ups p { margin: 0 0 8px; }
+  .grown-ups ul { margin: 0; padding-left: 20px; }
+  .eyebrow { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--plum-soft); }
+
+  /* ---------- What is coding? ---------- */
+  .lesson-head { text-align: center; display: grid; gap: 4px; }
+  .lesson-head h2 { font-size: clamp(32px, 8vw, 46px); }
+  .stage { display: grid; justify-items: center; gap: 10px; }
+  .stage .o-box { display: grid; place-items: end center; }
+  .stage .o-img { height: min(30vh, 230px); }
+  .o-img.jump { animation: jump .7s ease-out; }
+  .o-img.spin { animation: spin .7s ease-in-out; }
+  .o-img.wiggle { animation: wiggle .7s ease-in-out; }
+  .o-img.grow { animation: grow .7s ease-in-out; }
+  .slots { display: flex; gap: 10px; justify-content: center; align-items: center; }
+  .slot {
+    width: 78px; height: 78px; border-radius: 20px; box-sizing: border-box;
+    border: 3px dashed var(--grape); display: grid; place-items: center; position: relative;
+    font-family: var(--display); font-weight: 800; color: var(--grape); font-size: 22px;
+  }
+  .slot.full { border: 0; background: var(--grape); color: var(--white); animation: pop .2s cubic-bezier(.3,1.6,.5,1); }
+  .slot.now { background: var(--gold); color: var(--plum); scale: 1.12; }
+  .slot svg { width: 44px; height: 44px; }
+  .slot-arrow { color: var(--grape); width: 18px; }
+  .cmds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cmd {
+    background: var(--white); border-radius: 20px; padding: 10px 4px 8px;
+    display: grid; justify-items: center; gap: 2px; box-shadow: 0 5px 0 var(--sky-deep);
+    font-weight: 800; font-size: 16px; transition: transform .08s, box-shadow .08s;
+  }
+  .cmd:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--sky-deep); }
+  .cmd:disabled { opacity: .45; cursor: default; }
+  .cmd svg { width: 46px; height: 46px; color: var(--grape); }
+  .takeaway {
+    background: var(--white); border-radius: 22px; padding: 14px 18px; text-align: center;
+    display: grid; gap: 4px; animation: pop .35s cubic-bezier(.3,1.6,.5,1);
+  }
+  .takeaway strong { font-family: var(--display); font-size: 28px; line-height: 1.05; color: var(--grape); }
+  .takeaway span { font-size: 17px; font-weight: 700; }
+
+  /* ---------- What is AI? ---------- */
+  .ai-play { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .ai-play .o-img { height: 170px; }
+  .item-card {
+    width: 150px; height: 150px; margin: 0 auto; border-radius: 30px; background: var(--white);
+    display: grid; place-items: center; font-size: 92px; line-height: 1;
+    box-shadow: 0 6px 0 var(--sky-deep); animation: pop .3s cubic-bezier(.3,1.6,.5,1);
+  }
+  .item-name { text-align: center; font-family: var(--display); font-weight: 800; font-size: 24px; margin-top: 6px; }
+  .answer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .answer { min-height: 76px; border-radius: 22px; font-family: var(--display); font-weight: 800; font-size: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .08s, box-shadow .08s; }
+  .answer svg { width: 34px; height: 34px; }
+  .answer.yes { background: var(--go); color: var(--white); box-shadow: 0 6px 0 var(--go-dark); }
+  .answer.no { background: var(--blush); color: var(--plum); box-shadow: 0 6px 0 #D7718F; }
+  .answer:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
+  .answer:disabled { opacity: .45; cursor: default; }
+  .brain { background: var(--white); border-radius: 22px; padding: 10px 14px 12px; }
+  .brain .eyebrow { text-align: center; margin-bottom: 6px; }
+  .bins { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bin { border-radius: 16px; padding: 8px; min-height: 52px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; font-size: 30px; line-height: 1; }
+  .bin.food { background: rgb(47 181 126 / .14); }
+  .bin.not { background: rgb(244 155 182 / .22); }
+  .bin b { width: 100%; font-family: var(--body); font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--plum-soft); }
+  .bin span { animation: pop .3s cubic-bezier(.3,1.6,.5,1); }
+  .thinking { display: inline-flex; gap: 6px; }
+  .thinking i { width: 10px; height: 10px; border-radius: 50%; background: var(--grape); animation: blink 1s infinite; }
+  .thinking i:nth-child(2) { animation-delay: .2s; } .thinking i:nth-child(3) { animation-delay: .4s; }
+  .score { display: flex; gap: 4px; justify-content: center; }
+  .score svg { width: 30px; height: 30px; }
+
+  /* ---------- Menu ---------- */
+  .menu-head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .menu-head .o-img { height: 110px; }
+  .menu-head h1 { font-size: clamp(36px, 9vw, 54px); }
+  .menu-head p { margin: 4px 0 0; font-size: 18px; font-weight: 700; }
+  .shelf h2 { font-size: 26px; margin: 4px 0 10px; display: flex; align-items: center; gap: 10px; }
+  .shelf h2 .tag { font-family: var(--body); font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; color: var(--white); }
+  .tag.code { background: var(--grape); }
+  .tag.ai { background: var(--go); }
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .game {
+    background: var(--white); border-radius: 24px; padding: 12px; text-align: left;
+    display: grid; grid-template-rows: auto auto 1fr; gap: 6px; color: var(--plum);
+    box-shadow: 0 6px 0 var(--sky-deep); transition: transform .1s, box-shadow .1s; text-decoration: none;
+  }
+  .game:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sky-deep); }
+  .game .art { height: 118px; border-radius: 16px; display: grid; place-items: center; position: relative; overflow: hidden; }
+  .game .art svg { width: 64px; height: 64px; }
+  .game .art .o-mini { position: absolute; height: 92%; bottom: 0; right: 8px; width: auto; }
+  .game h3 { font-size: 23px; }
+  .game p { margin: 0; font-size: 15px; font-weight: 700; color: var(--plum-soft); }
+  .game.soon { box-shadow: none; background: rgb(255 255 255 / .55); cursor: default; }
+  .game.soon .art { filter: grayscale(.6); opacity: .6; }
+  .soon-pill { justify-self: start; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--sky-deep); }
+  .star-badge { position: absolute; top: 8px; left: 8px; display: flex; gap: 2px; }
+  .star-badge svg { width: 20px; height: 20px; }
+  .menu-foot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  @keyframes bob { 50% { transform: translateY(-12px) rotate(-3deg); } }
+  @keyframes pop { from { scale: .4; opacity: 0; } }
+  @keyframes nudge { 50% { transform: scale(1.06); } }
+  @keyframes jump { 40% { transform: translateY(-38%); } 70% { transform: translateY(0) scaleY(.92); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes wiggle { 20% { transform: rotate(-14deg); } 40% { transform: rotate(12deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(6deg); } }
+  @keyframes grow { 50% { transform: scale(1.35); } }
+  @keyframes blink { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .05s !important; }
   }
-  @media (max-width: 420px) {
-    .dots { gap: 4px; }
-    .dot { width: 27px; height: 27px; font-size: 14px; line-height: 29px; }
-    .arrow, .go { height: 58px; }
-    .arrow svg { width: 34px; height: 34px; }
-    .go { font-size: 22px; }
-    .tile { width: 38px; height: 38px; }
-    .tile svg { width: 26px; height: 26px; }
+  @media (max-width: 480px) {
+    .ideas { grid-template-columns: 1fr; }
+    .idea { grid-template-columns: auto 1fr; text-align: left; justify-items: start; align-items: center; column-gap: 12px; padding: 10px 14px; }
+    .idea .pic { grid-row: span 2; }
+    .cmds { gap: 7px; }
+    .cmd { font-size: 14px; }
+    .cmd svg { width: 38px; height: 38px; }
+    .slot { width: 66px; height: 66px; }
+    .ai-play .o-img { height: 130px; }
+    .item-card { width: 124px; height: 124px; font-size: 74px; }
+    .menu-head .o-img { height: 88px; }
   }
 </style>
 
-<section id="start" class="screen">
-  <img src="o.webp" alt="O, a fluffy letter O with a purple bow and backpack, waving">
-  <h1>O says <em>Oh!</em></h1>
-  <p>Help O hop to the star</p>
-  <button class="big-play" id="playBtn" type="button" aria-label="Play">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-    Play
-  </button>
+<!-- ===================== 1. WELCOME ===================== -->
+<section class="screen" id="s-welcome">
+  <div class="bar">
+    <div class="grow"></div>
+    <button class="icon-btn sound-btn" type="button" aria-label="Sound on" aria-pressed="true"></button>
+  </div>
+  <div class="hero">
+    <div class="bubble">Hi! I'm O!</div>
+    <img class="o-img" src="o.webp" alt="O, a fluffy letter O with a purple bow and backpack, waving">
+    <h1>O says <em>Oh!</em></h1>
+    <p class="lead">Play with O and find out how computers think.</p>
+  </div>
+  <div class="ideas">
+    <div class="idea">
+      <div class="pic" style="background: var(--sky-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="#6431AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 12h10M5 18h6"/><path d="m15 16 3 3 4-5"/></svg></div>
+      <h3>Coding</h3>
+      <p>Give steps in order</p>
+    </div>
+    <div class="idea">
+      <div class="pic" style="background: rgb(47 181 126 / .2)"><svg viewBox="0 0 24 24" fill="none" stroke="#1D8A5D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></svg></div>
+      <h3>AI</h3>
+      <p>Learn from examples</p>
+    </div>
+    <div class="idea">
+      <div class="pic" style="background: rgb(244 182 55 / .3)"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#F4B637" stroke="#C98A12" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+      <h3>Play</h3>
+      <p>Win stars with O</p>
+    </div>
+  </div>
+  <div class="row"><button class="btn glow" type="button" data-go="coding">Let's go!
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></button></div>
+  <div class="grown-ups">
+    <div class="eyebrow">For grown-ups</div>
+    <h2>What is O says Oh!?</h2>
+    <p>A playground where children from age 5 learn the first big ideas behind computers: <b>coding</b> (a computer follows exact steps) and <b>artificial intelligence</b> (a computer learns from examples).</p>
+    <ul>
+      <li>Short games of about five minutes. O speaks every instruction, so no reading is needed.</li>
+      <li>Kids learn by trying, making mistakes and fixing them, the way real programmers do.</li>
+      <li>No sign-up and no ads. Stars are saved only on this device.</li>
+    </ul>
+  </div>
 </section>
 
-<main id="game" class="screen" hidden>
+<!-- ===================== 2. WHAT IS CODING? ===================== -->
+<section class="screen" id="s-coding" hidden>
   <div class="bar">
-    <div class="dots" id="dots" aria-label="Levels"></div>
-    <button class="icon-btn" id="sayBtn" type="button" aria-label="Hear what to do">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
-    </button>
-    <button class="icon-btn" id="soundBtn" type="button" aria-label="Sound on" aria-pressed="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>
-    </button>
+    <button class="icon-btn" type="button" data-go="welcome" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="grow steps" aria-label="Step 1 of 2"><i class="on"></i><i></i></div>
+    <button class="icon-btn say-btn" type="button" aria-label="Hear it again"></button>
+    <button class="icon-btn sound-btn" type="button" aria-label="Sound on" aria-pressed="true"></button>
+  </div>
+  <div class="lesson-head">
+    <div class="eyebrow">Quick game 1</div>
+    <h2>What is coding?</h2>
+  </div>
+  <div class="stage">
+    <div class="bubble" id="codeBubble">Make me dance! Pick 3 moves.</div>
+    <div class="o-box"><img class="o-img" id="danceO" src="o.webp" alt="O"></div>
+    <div class="slots" id="slots"></div>
+  </div>
+  <div class="cmds" id="cmds"></div>
+  <div class="row">
+    <button class="btn quiet" type="button" id="codeClear">Start over</button>
+    <button class="btn" type="button" id="codeGo" disabled>Go!
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></button>
+  </div>
+  <div class="takeaway" id="codeTakeaway" hidden>
+    <strong>That's coding!</strong>
+    <span>You gave O steps, and O did them in order. Computers do exactly what code tells them.</span>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" type="button" data-go="ai">Next: What is AI?</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 3. WHAT IS AI? ===================== -->
+<section class="screen" id="s-ai" hidden>
+  <div class="bar">
+    <button class="icon-btn" type="button" data-go="coding" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="grow steps" aria-label="Step 2 of 2"><i class="on"></i><i class="on"></i></div>
+    <button class="icon-btn say-btn" type="button" aria-label="Hear it again"></button>
+    <button class="icon-btn sound-btn" type="button" aria-label="Sound on" aria-pressed="true"></button>
+  </div>
+  <div class="lesson-head">
+    <div class="eyebrow">Quick game 2</div>
+    <h2>What is AI?</h2>
+  </div>
+  <div class="ai-play">
+    <div class="o-box"><img class="o-img" id="aiO" src="o.webp" alt="O"></div>
+    <div class="bubble" id="aiBubble">Teach me what is food!</div>
+  </div>
+  <div id="aiItem"></div>
+  <div class="answer-row" id="aiAnswers"></div>
+  <div class="brain">
+    <div class="eyebrow">What O learned</div>
+    <div class="bins">
+      <div class="bin food" id="binFood"><b>Food</b></div>
+      <div class="bin not" id="binNot"><b>Not food</b></div>
+    </div>
+  </div>
+  <div class="takeaway" id="aiTakeaway" hidden>
+    <div class="score" id="aiScore"></div>
+    <strong>That's AI!</strong>
+    <span>Nobody gave O the rules. O learned from your examples, so if you teach O wrong, O learns wrong!</span>
+    <div class="row" style="margin-top:8px">
+      <button class="btn quiet" type="button" id="aiAgain">Teach again</button>
+      <button class="btn" type="button" data-go="menu" id="toMenu">Play games!</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 4. GAMES MENU ===================== -->
+<section class="screen" id="s-menu" hidden>
+  <div class="bar">
+    <div class="grow"></div>
+    <button class="icon-btn sound-btn" type="button" aria-label="Sound on" aria-pressed="true"></button>
+  </div>
+  <div class="menu-head">
+    <img class="o-img" src="o.webp" alt="O">
+    <div>
+      <h1>Pick a game!</h1>
+      <p>Tap a game to play with O.</p>
+    </div>
   </div>
 
-  <div class="stage">
-    <div class="board-wrap" id="boardWrap">
-      <div id="board"></div>
-      <div id="hero">
-        <div class="bubble" id="bubble" aria-live="polite"></div>
-        <div class="body"><img src="o.webp" alt="O"></div>
+  <div class="shelf">
+    <h2>Coding <span class="tag code">Steps</span></h2>
+    <div class="games">
+      <a class="game" href="hop.html">
+        <div class="art" style="background: var(--cream)">
+          <div class="star-badge" id="hopStars"></div>
+          <svg viewBox="0 0 24 24" style="position:absolute;left:18px;top:36px;width:56px;height:56px"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#F4B637" stroke="#C98A12" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
+        <h3>Hop to the Star</h3>
+        <p>Plan O's hops with arrows. 8 levels.</p>
+      </a>
+      <button class="game" type="button" data-go="coding">
+        <div class="art" style="background: var(--sky-deep)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6431AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:18px;top:30px"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3" fill="#6431AE"/><circle cx="17" cy="16" r="3" fill="#6431AE"/></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
+        <h3>Make O Dance</h3>
+        <p>Pick 3 moves, press Go.</p>
+      </button>
+      <div class="game soon" aria-disabled="true">
+        <div class="art" style="background: var(--sky-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="#6431AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></div>
+        <h3>Again and Again</h3>
+        <span class="soon-pill">Soon</span>
       </div>
     </div>
   </div>
 
-  <div>
-    <div class="tray" id="tray" aria-label="O's steps"></div>
-    <div class="tools" style="margin-top:8px">
-      <button class="undo" id="undoBtn" type="button" aria-label="Take away the last step">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
-        Back
+  <div class="shelf">
+    <h2>AI <span class="tag ai">Learning</span></h2>
+    <div class="games">
+      <button class="game" type="button" data-go="ai">
+        <div class="art" style="background: rgb(47 181 126 / .16)">
+          <span style="position:absolute;left:16px;top:28px;font-size:52px;line-height:1">🍎</span>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
+        <h3>Teach O</h3>
+        <p>Show O examples. Can O learn?</p>
       </button>
-      <button class="undo" id="clearBtn" type="button" aria-label="Take away all steps">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
-        Clear
-      </button>
+      <div class="game soon" aria-disabled="true">
+        <div class="art" style="background: rgb(47 181 126 / .16)"><svg viewBox="0 0 24 24" fill="none" stroke="#1D8A5D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg></div>
+        <h3>High or Low?</h3>
+        <span class="soon-pill">Soon</span>
+      </div>
+      <div class="game soon" aria-disabled="true">
+        <div class="art" style="background: rgb(47 181 126 / .16)"><svg viewBox="0 0 24 24" fill="none" stroke="#1D8A5D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></div>
+        <h3>O Reads Faces</h3>
+        <span class="soon-pill">Soon</span>
+      </div>
     </div>
   </div>
 
-  <div class="pad">
-    <button class="arrow" data-dir="left" type="button" aria-label="Left"></button>
-    <button class="arrow" data-dir="up" type="button" aria-label="Up"></button>
-    <button class="arrow" data-dir="down" type="button" aria-label="Down"></button>
-    <button class="arrow" data-dir="right" type="button" aria-label="Right"></button>
-    <button class="go" id="goBtn" type="button" aria-label="Go">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-    </button>
+  <div class="menu-foot">
+    <button class="btn quiet" type="button" data-go="welcome">About O says Oh!</button>
   </div>
-</main>
-
-<div class="card-back" id="winCard" hidden>
-  <div class="card">
-    <img src="o.webp" alt="">
-    <h2 id="winTitle">Oh!</h2>
-    <div class="stars" id="winStars"></div>
-    <button class="big-play" id="nextBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-      <span id="nextLabel">Next</span>
-    </button>
-  </div>
-</div>
-
-<canvas id="fx"></canvas>
+</section>
 
 <script>
-// ===== LEVELS =====
-// Each map is a little picture of the board:
-//   O = where O starts    * = the star    # = a bush O can't hop through    . = grass
-// Add a new level by adding a new map here. That's it!
-const LEVELS = [
-  { map: ["O.*"],                                         say: "Help O get the star! Tap the arrows, then press Go." },
-  { map: ["O...*"],                                       say: "The star is far away. How many hops?" },
-  { map: ["*", ".", "O"],                                 say: "Up, up, up!" },
-  { map: ["...*", "O..."],                                say: "Go across, then up." },
-  { map: ["..#*", "..#.", "O..."],                        say: "Watch out for the bushes!" },
-  { map: ["*#..", ".#.#", "...O"],                        say: "Find the way around." },
-  { map: ["O.#..", "#...#", "..#.*"],                     say: "A twisty path!" },
-  { map: ["O...#", "###..", "*..#.", ".#..."],            say: "The big one! Can you do it?" },
-];
-const MAX_STEPS = 14;
-
-const DIRS = {
-  up:    { dc: 0,  dr: -1, rot: -90, note: 660 },
-  down:  { dc: 0,  dr: 1,  rot: 90,  note: 440 },
-  left:  { dc: -1, dr: 0,  rot: 180, note: 523 },
-  right: { dc: 1,  dr: 0,  rot: 0,   note: 587 },
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("oSaysOh." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("oSaysOh." + k, JSON.stringify(v)); } catch (e) {} },
 };
 
-const $ = id => document.getElementById(id);
-const arrowSvg = rot => `<svg viewBox="0 0 24 24" style="rotate:${rot}deg" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14M13 6l6 6-6 6"/></svg>`;
-const starSvg = (cls = "") => `<svg class="${cls}" viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#F4B637" stroke="#C98A12" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
-const emptyStarSvg = `<svg viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#D4C1F6"/></svg>`;
-const bushSvg = `<svg viewBox="0 0 40 40"><g fill="#7C4BC4"><circle cx="13" cy="24" r="10"/><circle cx="27" cy="24" r="10"/><circle cx="20" cy="15" r="11"/></g><g fill="#A57AE6"><circle cx="16" cy="13" r="3.5"/><circle cx="10" cy="22" r="2.6"/></g><g fill="#F49BB6"><circle cx="26" cy="20" r="2.4"/><circle cx="19" cy="27" r="2.4"/><circle cx="29" cy="28" r="2"/></g></svg>`;
-
-// ===== STATE =====
-let levelIndex = 0, level = null, program = [], running = false;
-let done = new Set();
-let soundOn = true;
-try { done = new Set(JSON.parse(localStorage.getItem("oSaysOh.done") || "[]")); } catch (e) {}
-function saveProgress() { try { localStorage.setItem("oSaysOh.done", JSON.stringify([...done])); } catch (e) {} }
-
-// ===== SOUND =====
-let audio = null;
-function tone(freq, dur = .12, type = "sine", vol = .18, when = 0) {
+// ===== SOUND + VOICE =====
+let soundOn = store.get("sound", true), audio = null;
+function tone(freq, dur = .12, type = "triangle", vol = .16, when = 0) {
   if (!soundOn) return;
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
@@ -314,12 +423,7 @@ function tone(freq, dur = .12, type = "sine", vol = .18, when = 0) {
     o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + .02);
   } catch (e) {}
 }
-const sfx = {
-  tap: n => tone(n, .1, "triangle"),
-  step: () => tone(330, .08, "sine", .12),
-  bump: () => { tone(160, .25, "sawtooth", .08); tone(120, .3, "sawtooth", .06, .1); },
-  win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, "triangle", .16, i * .11)),
-};
+const chime = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, "triangle", .15, i * .1));
 function speak(text) {
   if (!soundOn || !("speechSynthesis" in window)) return;
   try {
@@ -329,227 +433,239 @@ function speak(text) {
     speechSynthesis.speak(u);
   } catch (e) {}
 }
-
-// ===== O TALKS =====
-let bubbleTimer;
-function say(text, { huge = false, ms = 2600, voice = text } = {}) {
-  const b = $("bubble");
+let lastLine = "";
+function say(bubble, text, voice = text) {
+  const b = $(bubble);
   b.textContent = text;
-  b.classList.toggle("huge", huge);
-  b.classList.add("show");
-  // keep the bubble on screen when O stands near an edge; the tail still points at O
-  b.style.setProperty("--shift", "0px");
-  const hero = $("hero").getBoundingClientRect(), half = b.offsetWidth / 2, pad = 8;
-  const mid = hero.left + hero.width / 2;
-  const shift = Math.max(pad - (mid - half), Math.min(0, innerWidth - pad - (mid + half)));
-  b.style.setProperty("--shift", shift + "px");
-  clearTimeout(bubbleTimer);
-  if (ms) bubbleTimer = setTimeout(() => b.classList.remove("show"), ms);
+  b.classList.remove("pop"); b.offsetWidth; b.classList.add("pop");
+  lastLine = voice;
   speak(voice);
 }
 
-// ===== BOARD =====
-function loadLevel(i) {
-  levelIndex = i;
-  const map = LEVELS[i].map;
-  level = { rows: map.length, cols: map[0].length, walls: new Set(), start: null, goal: null };
-  const board = $("board");
-  board.innerHTML = "";
-  map.forEach((row, r) => [...row].forEach((ch, c) => {
-    const cell = document.createElement("div");
-    cell.className = "cell";
-    if (ch === "#") { cell.classList.add("wall"); cell.innerHTML = bushSvg; level.walls.add(c + "," + r); }
-    if (ch === "*") { cell.innerHTML = starSvg("star"); level.goal = { c, r }; }
-    if (ch === "O") level.start = { c, r };
-    board.appendChild(cell);
-  }));
-  $("boardWrap").style.setProperty("--cols", level.cols);
-  $("boardWrap").style.setProperty("--ratio", level.cols / level.rows);
-  program = [];
-  setRunning(false);
-  moveHero(level.start, false);
-  $("hero").classList.remove("left");
-  setTimeout(() => say(LEVELS[i].say, { ms: 4200 }), 350);
-}
-
-function moveHero({ c, r }, hop = true) {
-  const hero = $("hero");
-  if (!hop) hero.style.transition = "none";
-  // each step is one cell plus the 6px gap between cells
-  hero.style.transform = `translate(calc(${c} * (100% + 6px)), calc(${r} * (100% + 6px)))`;
-  if (!hop) { hero.offsetWidth; hero.style.transition = ""; }
-  else { hero.classList.remove("hop"); hero.offsetWidth; hero.classList.add("hop"); }
-}
-
-function renderDots() {
-  const best = Math.max(-1, ...done);
-  $("dots").innerHTML = LEVELS.map((_, i) => {
-    const cls = ["dot", done.has(i) ? "done" : "", i === levelIndex ? "here" : ""].join(" ");
-    const open = i <= best + 1 || done.has(i);
-    return `<button class="${cls}" type="button" data-level="${i}" aria-label="Level ${i + 1}" ${open ? "" : "disabled"}>${i + 1}</button>`;
-  }).join("");
-}
-
-function renderTray() {
-  const tray = $("tray");
-  if (!program.length) {
-    tray.innerHTML = `<span class="hint"><i></i>Tap an arrow</span>`;
-  } else {
-    tray.innerHTML = program.map((d, i) =>
-      `<button class="tile" type="button" data-i="${i}" aria-label="${d}, tap to remove">${arrowSvg(DIRS[d].rot)}</button>`).join("");
-  }
-  $("undoBtn").disabled = $("clearBtn").disabled = running || !program.length;
-}
-
-function setRunning(on) {
-  running = on;
-  document.querySelectorAll(".pad button, .dot").forEach(b => b.disabled = on);
-  if (!on) renderDots();
-  renderTray();
-}
-
-// ===== RUN THE PROGRAM =====
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-async function go() {
-  if (running) return;
-  if (!program.length) { say("Tap the arrows first!"); return; }
-  setRunning(true);
-  let { c, r } = level.start;
-  moveHero(level.start, false);
-  const tiles = () => $("tray").querySelectorAll(".tile");
-  await sleep(250);
-
-  for (let i = 0; i < program.length; i++) {
-    tiles().forEach(t => t.classList.remove("now"));
-    tiles()[i]?.classList.add("now");
-    const d = DIRS[program[i]];
-    $("hero").classList.toggle("left", d.dc < 0 ? true : d.dc > 0 ? false : $("hero").classList.contains("left"));
-    const nc = c + d.dc, nr = r + d.dr;
-    const blocked = nc < 0 || nr < 0 || nc >= level.cols || nr >= level.rows || level.walls.has(nc + "," + nr);
-    if (blocked) {
-      tiles()[i]?.classList.replace("now", "oops");
-      const hero = $("hero");
-      hero.classList.remove("bump"); hero.offsetWidth; hero.classList.add("bump");
-      sfx.bump();
-      say("Oh oh! Bump!", { ms: 1800 });
-      await sleep(1700);
-      return resetAfterMiss();
-    }
-    c = nc; r = nr;
-    moveHero({ c, r });
-    sfx.step();
-    await sleep(520);
-    if (c === level.goal.c && r === level.goal.r) return win();
-  }
-  say("Oh? Not there yet!", { ms: 1800 });
-  await sleep(1700);
-  resetAfterMiss();
-}
-
-function resetAfterMiss() {
-  moveHero(level.start, false);
-  $("hero").classList.remove("left", "bump");
-  setRunning(false); // the steps stay, so kids can find and fix the wrong one
-}
-
-function win() {
-  const hero = $("hero");
-  hero.classList.remove("hop"); hero.classList.add("cheer");
-  sfx.win();
-  say("Oh!", { huge: true, ms: 1600, voice: "Ohhh!" });
-  confetti();
-  done.add(levelIndex);
-  saveProgress();
-  setTimeout(() => {
-    hero.classList.remove("cheer");
-    const last = levelIndex === LEVELS.length - 1;
-    $("winTitle").textContent = last ? "All the stars!" : "Oh! You did it!";
-    $("nextLabel").textContent = last ? "Again" : "Next";
-    $("winStars").innerHTML = LEVELS.map((_, i) => done.has(i) ? starSvg() : emptyStarSvg).join("");
-    $("winCard").hidden = false;
-    $("nextBtn").focus();
-    if (last) speak("Oh! You got all the stars!");
-  }, 1500);
-}
-
-// ===== CONFETTI =====
-function confetti() {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const cv = $("fx"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
-  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
-  const colors = ["#F4B637", "#8B52DB", "#F49BB6", "#2FB57E", "#FFFFFF"];
-  const box = $("hero").getBoundingClientRect();
-  const bits = Array.from({ length: 110 }, () => ({
-    x: box.left + box.width / 2, y: box.top + box.height / 2,
-    vx: (Math.random() - .5) * 12, vy: -Math.random() * 13 - 4,
-    s: Math.random() * 7 + 5, rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
-    c: colors[Math.floor(Math.random() * colors.length)], star: Math.random() < .25,
-  }));
-  let frames = 0;
-  (function tick() {
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    bits.forEach(b => {
-      b.vy += .35; b.x += b.vx; b.y += b.vy; b.rot += b.vr;
-      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot); ctx.fillStyle = b.c;
-      if (b.star) { ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? b.s * .45 : b.s; ctx.lineTo(Math.cos(k * Math.PI / 5) * rr, Math.sin(k * Math.PI / 5) * rr); } ctx.fill(); }
-      else ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2);
-      ctx.restore();
-    });
-    if (++frames < 150) requestAnimationFrame(tick); else ctx.clearRect(0, 0, innerWidth, innerHeight);
-  })();
-}
-
-// ===== BUTTONS =====
-document.querySelectorAll(".arrow").forEach(btn => {
-  const d = btn.dataset.dir;
-  btn.innerHTML = arrowSvg(DIRS[d].rot);
-  btn.addEventListener("click", () => {
-    if (running) return;
-    if (program.length >= MAX_STEPS) { say("That's a lot of steps! Press Go."); return; }
-    program.push(d);
-    sfx.tap(DIRS[d].note);
-    renderTray();
+const ICONS = {
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg>',
+  say: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#F4B637" stroke="#C98A12" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+  starEmpty: '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="#D4C1F6"/></svg>',
+};
+document.querySelectorAll(".sound-btn").forEach(b => b.innerHTML = ICONS.sound);
+document.querySelectorAll(".say-btn").forEach(b => { b.innerHTML = ICONS.say; b.addEventListener("click", () => speak(lastLine)); });
+function paintSound() {
+  document.querySelectorAll(".sound-btn").forEach(b => {
+    b.setAttribute("aria-pressed", soundOn);
+    b.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
   });
-});
-$("tray").addEventListener("click", e => {
-  const t = e.target.closest(".tile");
-  if (!t || running) return;
-  program.splice(+t.dataset.i, 1);
-  sfx.tap(300);
-  renderTray();
-});
-$("undoBtn").addEventListener("click", () => { program.pop(); sfx.tap(300); renderTray(); });
-$("clearBtn").addEventListener("click", () => { program = []; sfx.tap(250); renderTray(); });
-$("goBtn").addEventListener("click", go);
-$("sayBtn").addEventListener("click", () => say(LEVELS[levelIndex].say, { ms: 4200 }));
-$("soundBtn").addEventListener("click", e => {
-  soundOn = !soundOn;
-  e.currentTarget.setAttribute("aria-pressed", soundOn);
-  e.currentTarget.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
+}
+document.querySelectorAll(".sound-btn").forEach(b => b.addEventListener("click", () => {
+  soundOn = !soundOn; store.set("sound", soundOn); paintSound();
   if (!soundOn && "speechSynthesis" in window) speechSynthesis.cancel();
-});
-$("dots").addEventListener("click", e => {
-  const b = e.target.closest(".dot");
-  if (b && !running) loadLevel(+b.dataset.level);
-});
-$("nextBtn").addEventListener("click", () => {
-  $("winCard").hidden = true;
-  loadLevel(levelIndex === LEVELS.length - 1 ? 0 : levelIndex + 1);
-});
-$("playBtn").addEventListener("click", () => {
-  $("start").hidden = true;
-  $("game").hidden = false;
-  tone(523, .15, "triangle"); tone(784, .2, "triangle", .16, .1);
-  const firstOpen = LEVELS.findIndex((_, i) => !done.has(i));
-  loadLevel(firstOpen === -1 ? 0 : firstOpen);
+}));
+paintSound();
+
+// ===== SCREENS =====
+const SCREENS = ["welcome", "coding", "ai", "menu"];
+function go(name) {
+  SCREENS.forEach(s => $("s-" + s).hidden = s !== name);
+  scrollTo(0, 0);
+  if (name === "coding") startCoding();
+  if (name === "ai") startAI();
+  if (name === "menu") { store.set("seenIntro", true); paintMenu(); speak("Pick a game!"); }
+  if (name === "welcome") speak("Hi! I'm O! Let's play and learn how computers think.");
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go]");
+  if (t) { tone(660, .1); go(t.dataset.go); }
 });
 
-// keyboard: arrow keys add steps, Enter or Space runs
-addEventListener("keydown", e => {
-  if ($("game").hidden || !$("winCard").hidden) return;
-  const map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
-  if (map[e.key]) { e.preventDefault(); document.querySelector(`.arrow[data-dir="${map[e.key]}"]`).click(); }
-  if (e.key === "Backspace") { e.preventDefault(); if (!running && program.length) $("undoBtn").click(); }
+// ===== QUICK GAME 1: WHAT IS CODING? =====
+// Coding idea: O does exactly the moves you pick, in the order you pick them.
+const MOVES = {
+  jump:   { label: "Jump",   note: 660, svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M6 10l6-6 6 6"/><path d="M5 21h14"/></svg>' },
+  spin:   { label: "Spin",   note: 523, svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>' },
+  wiggle: { label: "Wiggle", note: 587, svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l3-5 4 10 4-10 4 10 3-5h2"/></svg>' },
+  grow:   { label: "Grow",   note: 440, svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>' },
+};
+const SLOT_COUNT = 3;
+let dance = [], dancing = false;
+
+$("cmds").innerHTML = Object.entries(MOVES).map(([k, m]) =>
+  `<button class="cmd" type="button" data-move="${k}">${m.svg}${m.label}</button>`).join("");
+
+function paintSlots(now = -1) {
+  const cells = [];
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    const m = dance[i];
+    if (i) cells.push('<svg class="slot-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>');
+    cells.push(`<div class="slot ${m ? "full" : ""} ${i === now ? "now" : ""}" aria-label="Step ${i + 1}${m ? ": " + MOVES[m].label : ""}">${m ? MOVES[m].svg : i + 1}</div>`);
+  }
+  $("slots").innerHTML = cells.join("");
+  const full = dance.length === SLOT_COUNT;
+  $("codeGo").disabled = !full || dancing;
+  $("codeGo").classList.toggle("glow", full && !dancing);
+  document.querySelectorAll(".cmd").forEach(b => b.disabled = full || dancing);
+  $("codeClear").disabled = dancing || !dance.length;
+}
+function startCoding() {
+  dance = []; dancing = false;
+  $("codeTakeaway").hidden = true;
+  paintSlots();
+  say("codeBubble", "Make me dance! Pick 3 moves.", "Make me dance! Pick three moves, then press Go.");
+}
+$("cmds").addEventListener("click", e => {
+  const b = e.target.closest(".cmd");
+  if (!b || dancing || dance.length >= SLOT_COUNT) return;
+  dance.push(b.dataset.move);
+  tone(MOVES[b.dataset.move].note);
+  paintSlots();
+  if (dance.length === SLOT_COUNT) say("codeBubble", "Now press Go!");
 });
+$("codeClear").addEventListener("click", () => { dance = []; tone(300); paintSlots(); });
+$("codeGo").addEventListener("click", async () => {
+  if (dancing || dance.length < SLOT_COUNT) return;
+  dancing = true; paintSlots();
+  const o = $("danceO");
+  for (let i = 0; i < dance.length; i++) {
+    paintSlots(i);
+    say("codeBubble", MOVES[dance[i]].label + "!");
+    o.classList.remove(...Object.keys(MOVES)); o.offsetWidth; o.classList.add(dance[i]);
+    tone(MOVES[dance[i]].note, .3); tone(MOVES[dance[i]].note * 1.5, .3, "triangle", .1, .15);
+    await sleep(950);
+  }
+  o.classList.remove(...Object.keys(MOVES));
+  dancing = false; paintSlots();
+  chime();
+  say("codeBubble", "Oh! I did your steps!", "Oh! I did your steps, in order! That's coding!");
+  $("codeTakeaway").hidden = false;
+  $("codeTakeaway").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+// ===== QUICK GAME 2: WHAT IS AI? =====
+// AI idea: O is never told the rule. O compares a new thing with the examples you
+// labeled and copies the label of the most similar one (a tiny "nearest neighbour" model).
+const TEACH = [
+  { e: "🍎", name: "Apple",  tags: ["fruit", "red", "round"] },
+  { e: "🧦", name: "Sock",   tags: ["clothes", "soft"] },
+  { e: "🍌", name: "Banana", tags: ["fruit", "yellow"] },
+  { e: "🚗", name: "Car",    tags: ["toy", "wheels", "red"] },
+  { e: "🍪", name: "Cookie", tags: ["sweet", "round", "baked"] },
+  { e: "🧸", name: "Teddy",  tags: ["toy", "soft"] },
+];
+const QUIZ = [
+  { e: "🍓", name: "Strawberry", tags: ["fruit", "red"] },
+  { e: "👟", name: "Shoe",       tags: ["clothes"] },
+  { e: "🍩", name: "Donut",      tags: ["sweet", "round", "baked"] },
+  { e: "🚲", name: "Bike",       tags: ["wheels", "toy"] },
+];
+let examples = [], step = 0, phase = "teach", right = 0, busy = false;
+
+const YES_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const NO_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+function guess(item) {
+  let best = 0, votes = { food: 0, not: 0 };
+  for (const ex of examples) {
+    const same = ex.tags.filter(t => item.tags.includes(t)).length;
+    if (same > best) { best = same; votes = { food: 0, not: 0 }; }
+    if (same === best && same > 0) votes[ex.food ? "food" : "not"]++;
+  }
+  if (!best || votes.food === votes.not) return null; // O has nothing similar to go on
+  return votes.food > votes.not;
+}
+function paintBins() {
+  $("binFood").innerHTML = "<b>Food</b>" + examples.filter(x => x.food).map(x => `<span title="${x.name}">${x.e}</span>`).join("");
+  $("binNot").innerHTML = "<b>Not food</b>" + examples.filter(x => !x.food).map(x => `<span title="${x.name}">${x.e}</span>`).join("");
+}
+function showItem(item) {
+  $("aiItem").innerHTML = `<div class="item-card" aria-hidden="true">${item.e}</div><div class="item-name">${item.name}</div>`;
+}
+function teachButtons() {
+  $("aiAnswers").innerHTML =
+    `<button class="answer yes" type="button" data-food="1">${YES_SVG}Food</button>` +
+    `<button class="answer no" type="button" data-food="0">${NO_SVG}Not food</button>`;
+}
+function checkButtons() {
+  $("aiAnswers").innerHTML =
+    `<button class="answer yes" type="button" data-check="1">${YES_SVG}Right!</button>` +
+    `<button class="answer no" type="button" data-check="0">${NO_SVG}Wrong</button>`;
+}
+function startAI() {
+  examples = []; step = 0; phase = "teach"; right = 0; busy = false;
+  $("aiTakeaway").hidden = true;
+  paintBins(); teachButtons(); showItem(TEACH[0]);
+  say("aiBubble", "Teach me what is food!", "I don't know what food is. Teach me! Is this food?");
+}
+async function nextQuiz() {
+  if (step >= QUIZ.length) return finishAI();
+  const item = QUIZ[step];
+  showItem(item);
+  $("aiAnswers").innerHTML = "";
+  $("aiBubble").innerHTML = '<span class="thinking" aria-label="O is thinking"><i></i><i></i><i></i></span>';
+  await sleep(1100);
+  const g = guess(item);
+  if (g === null) {
+    phase = "ask";
+    say("aiBubble", "Hmm, I don't know this one!", "Hmm, I never saw anything like this. Is it food?");
+    teachButtons();
+  } else {
+    phase = "check";
+    item.guess = g;
+    say("aiBubble", g ? "I think it's food!" : "I think it's not food!", (g ? "I think it's food!" : "I think it's not food!") + " Am I right?");
+    checkButtons();
+  }
+  busy = false;
+}
+function finishAI() {
+  phase = "done";
+  $("aiItem").innerHTML = "";
+  $("aiAnswers").innerHTML = "";
+  $("aiScore").innerHTML = QUIZ.map((_, i) => i < right ? ICONS.star : ICONS.starEmpty).join("");
+  chime();
+  say("aiBubble", `Oh! I got ${right} of ${QUIZ.length}!`, `Oh! I got ${right} out of ${QUIZ.length} right! I learned from your examples. That's AI!`);
+  $("aiTakeaway").hidden = false;
+  $("aiTakeaway").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+$("aiAnswers").addEventListener("click", async e => {
+  const b = e.target.closest("button");
+  if (!b || busy) return;
+  busy = true;
+  document.querySelectorAll(".answer").forEach(x => x.disabled = true);
+  if (phase === "teach") {
+    examples.push({ ...TEACH[step], food: b.dataset.food === "1" });
+    tone(b.dataset.food === "1" ? 784 : 392); paintBins();
+    step++;
+    if (step < TEACH.length) {
+      say("aiBubble", ["Got it!", "Oh, okay!", "I'll remember!"][step % 3], ["Got it!", "Oh, okay!", "I'll remember!"][step % 3] + " What about this?");
+      await sleep(700);
+      showItem(TEACH[step]); teachButtons(); busy = false;
+    } else {
+      say("aiBubble", "My turn! Let me guess.", "Thank you! Now it's my turn. I'll guess by myself.");
+      phase = "quiz"; step = 0;
+      await sleep(2400);
+      nextQuiz();
+    }
+  } else if (phase === "ask") {
+    examples.push({ ...QUIZ[step], food: b.dataset.food === "1" });
+    tone(600); paintBins();
+    say("aiBubble", "Thanks! Now I know.");
+    step++; await sleep(1500); nextQuiz();
+  } else if (phase === "check") {
+    const item = QUIZ[step], ok = b.dataset.check === "1";
+    if (ok) { right++; chime(); say("aiBubble", "Oh! Yay!"); }
+    else { tone(200, .3, "sawtooth", .07); say("aiBubble", "Oh oh! I'll learn that.", "Oh oh! Thanks, now I'll learn that."); }
+    examples.push({ ...item, food: ok ? item.guess : !item.guess });
+    paintBins();
+    step++; await sleep(1500); nextQuiz();
+  }
+});
+$("aiAgain").addEventListener("click", startAI);
+
+// ===== MENU =====
+function paintMenu() {
+  let done = [];
+  try { done = JSON.parse(localStorage.getItem("oSaysOh.done") || "[]"); } catch (e) {}
+  $("hopStars").innerHTML = done.length ? ICONS.star + `<b style="font-family:var(--display);font-size:16px;line-height:22px">${done.length}/8</b>` : "";
+}
+
+// Returning kids skip the intro and land on the games menu.
+if (store.get("seenIntro", false)) go("menu"); else SCREENS.forEach(s => $("s-" + s).hidden = s !== "welcome");
 </script>
