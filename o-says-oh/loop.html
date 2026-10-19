@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="shared.css">
 <style>
-  /* Layout: O talks on top, the board in the middle, then the repeat box (O repeats its arrows until she reaches the star), then the arrow pad. */
+  /* Layout: O talks on top, the board in the middle, then the step cards (an arrow + how many times), then the arrow pad. */
   .dots { display: flex; gap: 6px; }
   .dot { width: 32px; height: 32px; border-radius: 50%; background: var(--sky-deep); font-family: var(--display); font-weight: 800; font-size: 16px; line-height: 34px; }
   .dot.done { background: var(--gold); }
@@ -17,45 +17,46 @@
   .dot:disabled { opacity: .45; }
 
   .stage { display: grid; place-items: center; }
-  .board-wrap { position: relative; width: min(100%, 440px, calc((100dvh - 470px) * var(--ratio, 1))); min-width: 160px; }
+  .board-wrap { position: relative; width: min(100%, 420px, calc((100dvh - 480px) * var(--ratio, 1))); min-width: 160px; }
   #board { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 6px; border-radius: 22px; background: var(--sky-deep); }
   .cell { aspect-ratio: 1; border-radius: 14px; background: var(--cream); display: grid; place-items: center; }
   .cell.wall { background: transparent; }
   .cell.trail { background: #F6E7FF; }
   .cell svg { width: 78%; height: 78%; }
   .cell .star { animation: twinkle 1.6s ease-in-out infinite; }
+  .cell .dot-path { width: 22%; height: 22%; border-radius: 50%; background: var(--grape); opacity: .35; }
   #hero {
     position: absolute; left: 6px; top: 6px; z-index: 2; pointer-events: none;
     width: calc((100% - 12px - (var(--cols) - 1) * 6px) / var(--cols)); aspect-ratio: 1;
-    transition: transform .36s cubic-bezier(.3,.7,.4,1);
+    transition: transform .34s cubic-bezier(.3,.7,.4,1);
   }
   #hero img { position: absolute; inset: -14% 4% 4%; width: 92%; height: 110%; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; filter: drop-shadow(0 6px 4px rgb(74 35 120 / .25)); }
   #hero.left img { scale: -1 1; }
-  #hero.hop img { animation: hop .36s ease-out; }
+  #hero.hop img { animation: hop .34s ease-out; }
   #hero.bump img { animation: wobble .5s ease-in-out; }
 
-  /* the loop box: arrows inside a "repeat" frame */
-  .loop {
-    border: 4px solid var(--grape); border-radius: 24px; background: var(--white);
-    padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  /* step cards: each one is a direction and how many times to go that way */
+  .program { background: var(--white); border-radius: 22px; padding: 10px 12px 12px; display: grid; gap: 8px; }
+  .program-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .program-head b { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--grape); }
+  .program-head span { font-weight: 700; font-size: 15px; color: var(--plum-soft); }
+  .cards { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .step {
+    display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; align-items: center;
+    background: var(--grape); color: var(--white); border-radius: 16px; padding: 6px 8px; gap: 2px 6px;
+    animation: pop .2s cubic-bezier(.3,1.6,.5,1);
   }
-  .loop-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--grape); }
-  .loop-label svg { width: 26px; height: 26px; }
-  .slots { display: flex; gap: 8px; flex-wrap: wrap; }
-  .slot {
-    width: 54px; height: 54px; border-radius: 14px; border: 3px dashed var(--sky-deep);
-    display: grid; place-items: center; background: none; color: var(--white);
-  }
-  .slot.full { border: 0; background: var(--grape); animation: pop .2s cubic-bezier(.3,1.6,.5,1); }
-  .slot.now { background: var(--gold); color: var(--plum); scale: 1.1; }
-  .slot.oops { background: var(--blush); color: var(--plum); animation: shake .4s; }
-  .slot svg { width: 34px; height: 34px; }
-  .count { display: grid; justify-items: center; min-width: 76px; }
-  .count output { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1; color: var(--grape-dark); }
-  .count output.bump { animation: pop .3s cubic-bezier(.3,1.6,.5,1); }
-  .count small { font-weight: 800; font-size: 13px; color: var(--plum-soft); text-transform: uppercase; letter-spacing: .06em; }
-  .loop-hint { grid-column: 1 / -1; margin: 0; font-weight: 700; font-size: 15px; color: var(--plum-soft); }
-  .cell .dot-path { width: 22%; height: 22%; border-radius: 50%; background: var(--grape); opacity: .35; }
+  .step .dir { grid-row: span 2; width: 40px; height: 40px; display: grid; place-items: center; }
+  .step .dir svg { width: 36px; height: 36px; }
+  .step .n { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1; text-align: center; min-width: 2.4ch; }
+  .step .pm { display: flex; gap: 4px; }
+  .step .pm button { width: 28px; height: 28px; border-radius: 50%; background: rgb(255 255 255 / .25); color: var(--white); font-weight: 800; font-size: 20px; line-height: 1; }
+  .step .pm button:disabled { opacity: .35; }
+  .step.now { background: var(--gold); color: var(--plum); }
+  .step.now .pm { visibility: hidden; }
+  .step.oops { background: var(--blush); color: var(--plum); animation: shake .4s; }
+  .slot-empty { width: 92px; height: 66px; border-radius: 16px; border: 3px dashed var(--sky-deep); }
+  .then { color: var(--grape); width: 16px; flex: none; }
 
   .pad { display: grid; grid-template-columns: repeat(4, 1fr) 1.2fr; gap: 8px; }
   .arrow, .go { height: 64px; border-radius: 18px; display: grid; place-items: center; transition: transform .08s, box-shadow .08s; }
@@ -65,16 +66,17 @@
   .go svg { width: 34px; height: 34px; }
   .arrow:active:not(:disabled), .go:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--grape-dark); }
   .pad button:disabled { opacity: .45; }
-  .tools { display: flex; justify-content: center; gap: 10px; }
+  .tools { display: flex; justify-content: center; }
   .tools .btn.quiet { font-size: 17px; min-height: 44px; padding-inline: 16px; }
 
   @keyframes twinkle { 50% { transform: scale(1.12) rotate(8deg); } }
   @keyframes hop { 40% { translate: 0 -30%; } }
   @media (max-width: 420px) {
     .dot { width: 26px; height: 26px; font-size: 14px; line-height: 28px; }
-    .slot { width: 46px; height: 46px; }
-    .slot svg { width: 28px; height: 28px; }
     .arrow, .go { height: 56px; }
+    .step .dir { width: 32px; height: 32px; }
+    .step .dir svg { width: 28px; height: 28px; }
+    .step .n { font-size: 22px; }
   }
 </style>
 </head>
@@ -99,19 +101,12 @@
     </div>
   </div>
 
-  <div class="loop" aria-label="Repeat box">
-    <div class="loop-label">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-      Repeat again and again
-    </div>
-    <div class="slots" id="slots"></div>
-    <div class="count"><output id="count" aria-live="polite">0</output><small>times</small></div>
-    <p class="loop-hint" id="loopHint"></p>
+  <div class="program">
+    <div class="program-head"><b>O's steps</b><span id="hint"></span></div>
+    <div class="cards" id="cards"></div>
   </div>
 
-  <div class="tools">
-    <button class="btn quiet" type="button" id="clearBtn">Clear</button>
-  </div>
+  <div class="tools"><button class="btn quiet" type="button" id="clearBtn">Clear</button></div>
 
   <div class="pad">
     <button class="arrow" data-dir="left" type="button" aria-label="Left"></button>
@@ -125,29 +120,35 @@
 <script src="shared.js"></script>
 <script>
 // ===== LEVELS =====
-// O = start, * = star, # = bush, . = grass.
-// "path" is the pattern that solves the level. It is only used to draw the dots
-// on the board, so kids can SEE the shape that repeats. Its length = arrows in the box.
-// O repeats the box by herself until she reaches the star.
+// Map: O = start, * = star, # = bush, . = grass.
+// "route" is the answer, as [direction, how many times]. It draws the dots on the board
+// and sets how many step cards fit. Kids learn: instead of → → → you can say "→ 3 times".
 const LEVELS = [
-  { map: ["O....*"],                               path: ["right"],               say: "Put one arrow in the box. I'll do it again and again!" },
-  { map: ["...*", "#...", "#..#", "O..#"],         path: ["right", "up"],         say: "Stairs! Follow the dots. Which two arrows make one stair?" },
-  { map: ["O..#.", "#....", "..#.*"],              path: ["right", "right", "down"], say: "Follow the dots. Which three arrows repeat?" },
-  { map: ["..*", "#..", "...", "#.#", "O.#"],      path: ["right", "up", "up"],   say: "Follow the dots. Find the three arrows that repeat." },
-  { map: ["O.#....", "#..#...", "##..#..", "###..#.", "####.*."], path: ["right", "down"], say: "The big staircase! Two arrows, again and again." },
+  { map: ["O....*"],                                   route: [["right", 5]],
+    say: "Tap the right arrow. Each tap adds one more step!" },
+  { map: ["##.*", "##..", "O..."],                     route: [["right", 3], ["up", 2]],
+    say: "Count the dots! How many steps right? How many up?" },
+  { map: ["O..###", "##.###", "##...*"],               route: [["right", 2], ["down", 2], ["right", 3]],
+    say: "Three cards this time. Follow the dots!" },
+  { map: ["..*", "#..", "...", "#.#", "O.#"],          route: [["right", 1], ["up", 2], ["right", 1], ["up", 2]],
+    say: "Stairs! Right, up, right, up. How many each time?" },
+  { map: [".....", ".###.", ".#.#*", ".#...", "O#..."], route: [["up", 4], ["right", 4], ["down", 2]],
+    say: "A big trip! Count the steps for each card." },
 ];
-const MAX_ROUNDS = 8; // stop O if a pattern never gets anywhere
+const MAX_COUNT = 6;
 const DIRS = {
-  up:    { dc: 0,  dr: -1, rot: -90, note: 660 },
-  down:  { dc: 0,  dr: 1,  rot: 90,  note: 440 },
-  left:  { dc: -1, dr: 0,  rot: 180, note: 523 },
-  right: { dc: 1,  dr: 0,  rot: 0,   note: 587 },
+  up:    { dc: 0,  dr: -1, rot: -90, note: 660, word: "up" },
+  down:  { dc: 0,  dr: 1,  rot: 90,  note: 440, word: "down" },
+  left:  { dc: -1, dr: 0,  rot: 180, note: 523, word: "left" },
+  right: { dc: 1,  dr: 0,  rot: 0,   note: 587, word: "right" },
 };
 const arrowSvg = rot => `<svg viewBox="0 0 24 24" style="rotate:${rot}deg" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14M13 6l6 6-6 6"/></svg>`;
+const thenSvg = '<svg class="then" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
 const bushSvg = `<svg viewBox="0 0 40 40"><g fill="#7C4BC4"><circle cx="13" cy="24" r="10"/><circle cx="27" cy="24" r="10"/><circle cx="20" cy="15" r="11"/></g><g fill="#A57AE6"><circle cx="16" cy="13" r="3.5"/><circle cx="10" cy="22" r="2.6"/></g><g fill="#F49BB6"><circle cx="26" cy="20" r="2.4"/><circle cx="19" cy="27" r="2.4"/></g></svg>`;
 
-let li = 0, level, pattern = [], running = false;
+let li = 0, level, steps = [], running = false; // steps: [{ dir, n }]
 let done = new Set(store.get("loopDone", []));
+const maxCards = () => LEVELS[li].route.length;
 
 function loadLevel(i) {
   li = i;
@@ -162,25 +163,23 @@ function loadLevel(i) {
     if (ch === "O") level.start = { c, r };
     $("board").appendChild(cell);
   }));
-  // dots along the route, so the repeating shape is easy to see
+  // dots along the route, so kids can count the steps in each direction
   let { c, r } = level.start;
-  for (let n = 0; n < 40 && !(c === level.goal.c && r === level.goal.r); n++) {
-    const d = DIRS[LEVELS[i].path[n % LEVELS[i].path.length]];
-    c += d.dc; r += d.dr;
+  for (const [dir, n] of LEVELS[i].route) for (let k = 0; k < n; k++) {
+    c += DIRS[dir].dc; r += DIRS[dir].dr;
     const cell = document.querySelector(`.cell[data-at="${c},${r}"]`);
     if (cell && !cell.innerHTML) cell.innerHTML = '<span class="dot-path"></span>';
   }
   $("boardWrap").style.setProperty("--cols", level.cols);
   $("boardWrap").style.setProperty("--ratio", level.cols / level.rows);
-  pattern = [];
-  $("count").textContent = "0";
+  steps = [];
   setRunning(false);
   resetHero();
   say("bubble", LEVELS[i].say);
 }
 
 function resetHero() {
-  clearTrail();
+  document.querySelectorAll(".cell.trail").forEach(c => c.classList.remove("trail"));
   moveHero(level.start, false);
   $("hero").classList.remove("left", "bump");
 }
@@ -191,72 +190,94 @@ function moveHero({ c, r }, hop = true) {
   if (!hop) { h.offsetWidth; h.style.transition = ""; }
   else { h.classList.remove("hop"); h.offsetWidth; h.classList.add("hop"); }
 }
-function clearTrail() { document.querySelectorAll(".cell.trail").forEach(c => c.classList.remove("trail")); }
 
-function paint(now = -1, oops = -1) {
-  const n = LEVELS[li].path.length, cells = [];
+function paint(now = -1, count = 0, oops = -1) {
+  const n = maxCards(), parts = [];
   for (let i = 0; i < n; i++) {
-    const d = pattern[i];
-    const cls = ["slot", d ? "full" : "", i === now ? "now" : "", i === oops ? "oops" : ""].join(" ");
-    cells.push(`<button type="button" class="${cls}" data-i="${i}" aria-label="${d ? d + ", tap to remove" : "empty"}" ${running ? "disabled" : ""}>${d ? arrowSvg(DIRS[d].rot) : ""}</button>`);
+    if (i) parts.push(thenSvg);
+    const s = steps[i];
+    if (!s) { parts.push('<div class="slot-empty" aria-label="Empty step card"></div>'); continue; }
+    const cls = ["step", i === now ? "now" : "", i === oops ? "oops" : ""].join(" ");
+    parts.push(`<div class="${cls}" aria-label="${DIRS[s.dir].word} ${s.n} times">
+      <span class="dir">${arrowSvg(DIRS[s.dir].rot)}</span>
+      <span class="n">${i === now ? count + "/" + s.n : "×" + s.n}</span>
+      <span class="pm">
+        <button type="button" data-i="${i}" data-d="-1" aria-label="One less" ${running ? "disabled" : ""}>−</button>
+        <button type="button" data-i="${i}" data-d="1" aria-label="One more" ${running || s.n >= MAX_COUNT ? "disabled" : ""}>+</button>
+      </span></div>`);
   }
-  $("slots").innerHTML = cells.join("");
-  $("loopHint").textContent = pattern.length < n ? `Fill ${n === 1 ? "1 arrow" : n + " arrows"}, then press Go.` : "Ready! Press Go.";
-  document.querySelectorAll(".arrow").forEach(b => b.disabled = running || pattern.length >= n);
+  $("cards").innerHTML = parts.join("");
+  $("hint").textContent = steps.length < n ? `${n} ${n === 1 ? "card" : "cards"}: arrow + how many` : "Ready? Press Go!";
+  document.querySelectorAll(".arrow").forEach(b => b.disabled = running);
   $("goBtn").disabled = running;
-  $("clearBtn").disabled = running || !pattern.length;
+  $("clearBtn").disabled = running || !steps.length;
   const best = Math.max(-1, ...done);
   $("dots").innerHTML = LEVELS.map((_, i) => `<button class="dot ${done.has(i) ? "done" : ""} ${i === li ? "here" : ""}" type="button" data-level="${i}" aria-label="Level ${i + 1}" ${running || (i > best + 1 && !done.has(i)) ? "disabled" : ""}>${i + 1}</button>`).join("");
 }
 function setRunning(on) { running = on; paint(); }
 
+// Tapping an arrow: same as the last card? Count one more. New direction? New card.
+function addArrow(dir) {
+  const last = steps[steps.length - 1];
+  if (last && last.dir === dir) {
+    if (last.n >= MAX_COUNT) return;
+    last.n++;
+  } else {
+    if (steps.length >= maxCards()) {
+      say("bubble", `Only ${maxCards()} ${maxCards() === 1 ? "card" : "cards"}! Use − and + to change the numbers.`);
+      return;
+    }
+    steps.push({ dir, n: 1 });
+  }
+  tone(DIRS[dir].note);
+  paint();
+}
+
 async function go() {
   if (running) return;
-  if (pattern.length < LEVELS[li].path.length) { say("bubble", "Fill the repeat box first!"); return; }
+  if (!steps.length) { say("bubble", "Tap an arrow first!"); return; }
   setRunning(true);
   resetHero();
   let { c, r } = level.start;
   await sleep(250);
-  for (let t = 0; t < MAX_ROUNDS; t++) {
-    const out = $("count");
-    out.textContent = t + 1; out.classList.remove("bump"); out.offsetWidth; out.classList.add("bump");
-    speak(String(t + 1));
-    tone(392 + t * 60, .15, "sine", .1);
-    for (let i = 0; i < pattern.length; i++) {
-      paint(i);
-      const d = DIRS[pattern[i]];
-      if (d.dc) $("hero").classList.toggle("left", d.dc < 0);
+  for (let i = 0; i < steps.length; i++) {
+    const { dir, n } = steps[i], d = DIRS[dir];
+    if (d.dc) $("hero").classList.toggle("left", d.dc < 0);
+    for (let k = 1; k <= n; k++) {
+      paint(i, k);
+      speak(String(k));
       const nc = c + d.dc, nr = r + d.dr;
       if (nc < 0 || nr < 0 || nc >= level.cols || nr >= level.rows || level.walls.has(nc + "," + nr)) {
-        paint(-1, i);
+        paint(-1, 0, i);
         $("hero").classList.remove("bump"); $("hero").offsetWidth; $("hero").classList.add("bump");
         buzz(); animateO("oFace", "oops");
-        say("bubble", "Oh oh! Bump!", "Oh oh! Bump! Try a different pattern or number.");
-        await sleep(1800);
+        say("bubble", "Oh oh! Bump!", `Oh oh! Bump! Check the ${d.word} card.`);
+        await sleep(1900);
         resetHero(); setRunning(false); return;
       }
       document.querySelector(`.cell[data-at="${c},${r}"]`)?.classList.add("trail");
       c = nc; r = nr;
-      moveHero({ c, r }); tone(330 + i * 40, .08, "sine", .1);
-      await sleep(420);
-      if (c === level.goal.c && r === level.goal.r) return win(t + 1);
+      moveHero({ c, r }); tone(d.note - 100 + k * 30, .1, "sine", .1);
+      await sleep(480);
+      if (c === level.goal.c && r === level.goal.r) return win();
     }
-    await sleep(250);
   }
-  say("bubble", "Oh? I'm going around and around!", "Oh? I'm going around and around! Try different arrows.");
+  say("bubble", "Oh? Not there yet!", "Oh? Not there yet! Do I need more steps?");
   await sleep(1800);
   resetHero(); setRunning(false);
 }
 
-function win(times) {
+function win() {
   chime(); confetti($("hero")); animateO("oFace", "cheer");
-  say("bubble", "Oh! Repeat is magic!", "Oh! I repeated your steps " + times + " times!");
+  const total = steps.reduce((a, s) => a + s.n, 0);
+  const big = steps.reduce((a, s) => s.n > a.n ? s : a); // the best example of "do it again"
+  say("bubble", "Oh! I made it!", `Oh! I made it! ${total} steps, with only ${steps.length} ${steps.length === 1 ? "card" : "cards"}!`);
   done.add(li); store.set("loopDone", [...done]);
   setTimeout(() => {
     const last = li === LEVELS.length - 1;
     showWin({
       title: last ? "Loop master!" : "Oh! You did it!",
-      text: `Your ${pattern.length === 1 ? "arrow" : pattern.length + " arrows"} ran ${times} times. Doing the same steps again and again is called a loop.`,
+      text: `O took ${total} steps, but you only needed ${steps.length} ${steps.length === 1 ? "card" : "cards"}. Saying "go ${DIRS[big.dir].word} ${big.n} times" instead of ${big.n} separate arrows is called a loop.`,
       stars: LEVELS.map((_, i) => done.has(i)),
       again: last ? "Play again" : "Next",
       onAgain: () => loadLevel(last ? 0 : li + 1),
@@ -267,18 +288,19 @@ function win(times) {
 // ===== BUTTONS =====
 document.querySelectorAll(".arrow").forEach(b => {
   b.innerHTML = arrowSvg(DIRS[b.dataset.dir].rot);
-  b.addEventListener("click", () => {
-    if (running || pattern.length >= LEVELS[li].path.length) return;
-    pattern.push(b.dataset.dir); tone(DIRS[b.dataset.dir].note); paint();
-    if (pattern.length === LEVELS[li].path.length) say("bubble", "Press Go! I'll repeat it.", "The box is full! Press Go and I'll repeat it again and again.");
-  });
+  b.addEventListener("click", () => { if (!running) addArrow(b.dataset.dir); });
 });
-$("slots").addEventListener("click", e => {
-  const s = e.target.closest(".slot.full");
-  if (!s || running) return;
-  pattern.splice(+s.dataset.i, 1); tone(300); paint();
+$("cards").addEventListener("click", e => {
+  const b = e.target.closest("button[data-i]");
+  if (!b || running) return;
+  const s = steps[+b.dataset.i];
+  s.n += +b.dataset.d;
+  if (s.n < 1) steps.splice(+b.dataset.i, 1); // − on ×1 removes the card
+  s.n = Math.min(s.n, MAX_COUNT);
+  tone(400 + 40 * Math.max(s.n, 0), .1);
+  paint();
 });
-$("clearBtn").addEventListener("click", () => { pattern = []; tone(250); paint(); });
+$("clearBtn").addEventListener("click", () => { steps = []; tone(250); paint(); });
 $("goBtn").innerHTML = ICONS.play;
 $("goBtn").addEventListener("click", go);
 $("dots").addEventListener("click", e => { const d = e.target.closest(".dot"); if (d && !running) loadLevel(+d.dataset.level); });
