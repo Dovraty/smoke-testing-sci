@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shape Patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Layout: O talks on top, the pattern row (a train of shapes) in the middle, choices or the shape maker below. */
+  .phase { display: flex; gap: 8px; justify-content: center; }
+  .phase span { padding: 5px 14px; border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--sky-deep); color: var(--plum-soft); }
+  .phase span.on { background: var(--grape); color: var(--white); }
+  .progress { display: flex; gap: 4px; justify-content: center; }
+  .progress svg { width: 24px; height: 24px; }
+
+  .train { background: var(--white); border-radius: 24px; padding: 14px 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 92px; align-items: center; }
+  .tile { width: 58px; height: 58px; border-radius: 16px; background: var(--sky); display: grid; place-items: center; animation: pop .25s cubic-bezier(.3,1.6,.5,1); }
+  .tile svg { width: 46px; height: 46px; }
+  .tile.mystery { background: none; border: 3px dashed var(--grape); font-family: var(--display); font-weight: 800; font-size: 32px; color: var(--grape); animation: nudge 1.2s ease-in-out infinite; }
+  .tile.unit { box-shadow: 0 0 0 4px var(--gold); }
+  .tile.guess { box-shadow: 0 0 0 4px var(--go); }
+  .tile.reading { scale: 1.12; background: #FFF1CC; }
+  .tile.remove { cursor: pointer; }
+
+  .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .choice { aspect-ratio: 1; max-height: 120px; border-radius: 24px; background: var(--white); box-shadow: 0 6px 0 var(--sky-deep); display: grid; place-items: center; transition: transform .08s, box-shadow .08s; }
+  .choice svg { width: 64%; height: 64%; }
+  .choice:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--sky-deep); }
+  .choice.wrong { animation: shake .4s; opacity: .45; }
+  .choice.right { box-shadow: 0 0 0 5px var(--go), 0 6px 0 var(--go-dark); }
+
+  .maker { display: grid; gap: 10px; }
+  .row-label { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--plum-soft); margin-bottom: 4px; }
+  .colors, .shapes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch { width: 46px; height: 46px; border-radius: 50%; box-shadow: 0 3px 0 rgb(74 35 120 / .2); }
+  .swatch[aria-pressed="true"] { box-shadow: 0 0 0 4px var(--white), 0 0 0 7px var(--plum); }
+  .shape-btn { width: 60px; height: 60px; border-radius: 18px; background: var(--white); box-shadow: 0 4px 0 var(--sky-deep); display: grid; place-items: center; }
+  .shape-btn svg { width: 44px; height: 44px; }
+  .shape-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--sky-deep); }
+  .shape-btn:disabled { opacity: .4; }
+  @media (max-width: 420px) {
+    .tile { width: 48px; height: 48px; } .tile svg { width: 38px; height: 38px; }
+    .swatch { width: 40px; height: 40px; } .shape-btn { width: 52px; height: 52px; }
+  }
+</style>
+</head>
+<body>
+<main class="screen">
+  <div class="bar">
+    <a class="icon-btn home-btn"></a>
+    <div class="grow phase"><span id="ph1" class="on">1. Guess</span><span id="ph2">2. Make</span></div>
+    <button class="icon-btn say-btn" type="button"></button>
+    <button class="icon-btn sound-btn" type="button"></button>
+  </div>
+
+  <div class="talk">
+    <img class="o-img" id="oFace" src="o.webp" alt="O">
+    <div class="bubble" id="bubble" aria-live="polite">Hi!</div>
+  </div>
+
+  <div class="progress" id="progress" aria-label="Rounds"></div>
+  <div class="train" id="train" aria-label="Pattern"></div>
+  <div id="controls"></div>
+</main>
+
+<script src="shared.js"></script>
+<script>
+// ===== SHAPES AND COLORS =====
+const COLORS = {
+  red:    { hex: "#EF5A5A", word: "red" },
+  blue:   { hex: "#4AA3E8", word: "blue" },
+  yellow: { hex: "#F4B637", word: "yellow" },
+  green:  { hex: "#2FB57E", word: "green" },
+  purple: { hex: "#8B52DB", word: "purple" },
+};
+const SHAPES = {
+  circle:   c => `<circle cx="24" cy="24" r="19" fill="${c}"/>`,
+  square:   c => `<rect x="6" y="6" width="36" height="36" rx="6" fill="${c}"/>`,
+  triangle: c => `<path d="M24 4 L44 41 H4 Z" fill="${c}" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>`,
+  star:     c => `<path d="M24 3l6.2 13 14.2 1.8-10.4 9.8 2.7 14.1L24 34.8l-12.7 6.9 2.7-14.1L3.6 17.8l14.2-1.8z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`,
+  heart:    c => `<path d="M24 42S5 30.5 5 17.5A9.5 9.5 0 0 1 24 12a9.5 9.5 0 0 1 19 5.5C43 30.5 24 42 24 42z" fill="${c}"/>`,
+};
+// A piece is "color shape", for example "red circle".
+const parse = p => { const [color, shape] = p.split(" "); return { color, shape }; };
+const pieceSvg = p => { const { color, shape } = parse(p); return `<svg viewBox="0 0 48 48" role="img" aria-label="${p}">${SHAPES[shape](COLORS[color].hex)}</svg>`; };
+
+// ===== PART 1: WHAT COMES NEXT? =====
+// Each round: the pattern shown, then the right answer, then two wrong choices.
+const ROUNDS = [
+  { show: ["red circle", "blue circle", "red circle", "blue circle", "red circle"], answer: "blue circle", others: ["red circle", "yellow circle"] },
+  { show: ["yellow star", "yellow heart", "yellow star", "yellow heart", "yellow star"], answer: "yellow heart", others: ["yellow star", "yellow square"] },
+  { show: ["green square", "green square", "purple triangle", "green square", "green square"], answer: "purple triangle", others: ["green square", "purple square"] },
+  { show: ["red circle", "yellow square", "blue triangle", "red circle", "yellow square"], answer: "blue triangle", others: ["red circle", "blue square"] },
+  { show: ["red heart", "blue star", "red heart", "blue star"], answer: "red heart", others: ["blue star", "blue heart"] },
+  { show: ["purple circle", "yellow star", "yellow star", "purple circle", "yellow star"], answer: "yellow star", others: ["purple circle", "purple star"] },
+];
+let ri = 0, firstTry = true, results = [], locked = false;
+
+function paintProgress() {
+  $("progress").innerHTML = ROUNDS.map((_, i) => i < results.length ? (results[i] ? ICONS.star : ICONS.starEmpty)
+    : `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="${i === ri ? "#8B52DB" : "#D4C1F6"}"/></svg>`).join("");
+}
+function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
+
+function loadRound(i) {
+  ri = i; firstTry = true; locked = false;
+  const r = ROUNDS[i];
+  $("train").innerHTML = r.show.map(p => `<div class="tile">${pieceSvg(p)}</div>`).join("") + '<div class="tile mystery" id="mystery">?</div>';
+  $("controls").innerHTML = `<div class="choices">${shuffle([r.answer, ...r.others]).map(p =>
+    `<button class="choice" type="button" data-p="${p}">${pieceSvg(p)}</button>`).join("")}</div>`;
+  paintProgress();
+  say("bubble", i === 0 ? "What comes next?" : ["What's next?", "Find the pattern!", "Say it out loud!"][i % 3],
+    i === 0 ? "Look at the shapes. They make a pattern! What comes next?" : "What comes next?");
+}
+
+// O reads the pattern out loud, lighting up each shape. Saying it helps you hear the pattern!
+async function readPattern() {
+  const tiles = [...document.querySelectorAll("#train .tile:not(.mystery)")];
+  const words = ROUNDS[ri].show.join(", ");
+  speak(words + ", and then?");
+  for (const t of tiles) { t.classList.add("reading"); await sleep(650); t.classList.remove("reading"); }
+}
+
+async function pick(btn) {
+  if (locked) return;
+  const r = ROUNDS[ri], p = btn.dataset.p;
+  if (p === r.answer) {
+    locked = true;
+    btn.classList.add("right");
+    document.querySelectorAll(".choice").forEach(b => b.disabled = true);
+    const m = $("mystery"); m.className = "tile guess"; m.innerHTML = pieceSvg(p);
+    results.push(firstTry); paintProgress();
+    chime(); animateO("oFace", "cheer");
+    say("bubble", "Oh! You found the pattern!", `Oh! Yes, ${p}! You found the pattern!`);
+    await sleep(2200);
+    if (ri + 1 < ROUNDS.length) loadRound(ri + 1); else startMaker();
+  } else {
+    firstTry = false;
+    btn.classList.remove("wrong"); btn.offsetWidth; btn.classList.add("wrong"); btn.disabled = true;
+    buzz(); animateO("oFace", "oops");
+    $("bubble").textContent = "Hmm, let's say it together!";
+    await sleep(500);
+    readPattern();
+  }
+}
+
+// ===== PART 2: YOUR TURN, O GUESSES =====
+// O looks for the smallest group of shapes that repeats from the start,
+// then uses it to guess what comes next. Finding patterns is what AI is good at!
+let made = [], color = "red", oTurns = 0;
+const MAX_MADE = 8;
+
+function findRepeat(seq) {
+  for (let k = 1; k <= seq.length / 2; k++) {
+    if (seq.every((p, i) => p === seq[i % k])) return k;
+  }
+  return 0;
+}
+
+function startMaker() {
+  $("ph1").classList.remove("on"); $("ph2").classList.add("on");
+  $("progress").hidden = true;
+  made = []; oTurns = 0;
+  paintMaker();
+  say("bubble", "Your turn! Make a pattern for me.", "Now it's your turn! Make a pattern with shapes and colors. Then ask me what comes next!");
+}
+function paintMaker() {
+  $("train").innerHTML = made.length
+    ? made.map((p, i) => `<button class="tile remove" type="button" data-i="${i}" aria-label="${p}, tap to remove">${pieceSvg(p)}</button>`).join("")
+    : '<span style="font-weight:800;color:var(--plum-soft)">Pick a color, then tap shapes</span>';
+  const full = made.length >= MAX_MADE;
+  $("controls").innerHTML = `<div class="panel maker">
+      <div><div class="row-label">Color</div><div class="colors">${Object.entries(COLORS).map(([k, c]) =>
+        `<button class="swatch" type="button" data-color="${k}" style="background:${c.hex}" aria-label="${c.word}" aria-pressed="${k === color}"></button>`).join("")}</div></div>
+      <div><div class="row-label">Shape</div><div class="shapes">${Object.keys(SHAPES).map(s =>
+        `<button class="shape-btn" type="button" data-shape="${s}" aria-label="${color} ${s}" ${full ? "disabled" : ""}>${pieceSvg(color + " " + s)}</button>`).join("")}</div></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn quiet" type="button" id="clearMade" ${made.length ? "" : "disabled"}>Clear</button>
+      <button class="btn ${made.length >= 4 ? "glow" : ""}" type="button" id="askO" ${made.length >= 3 ? "" : "disabled"}>What's next, O?</button>
+    </div>
+    ${oTurns >= 2 ? '<div class="row" style="margin-top:10px"><button class="btn quiet" type="button" id="finish">I\'m done!</button></div>' : ""}`;
+}
+
+async function askO() {
+  const k = findRepeat(made);
+  think("bubble");
+  await sleep(1100);
+  if (!k) {
+    buzz(); animateO("oFace", "oops");
+    say("bubble", "Hmm, I can't find a pattern!", "Hmm, I can't find a part that repeats. Try making the same shapes again!");
+    return;
+  }
+  const next = made[made.length % k];
+  const tiles = document.querySelectorAll("#train .tile");
+  tiles.forEach((t, i) => i < k && t.classList.add("unit"));
+  $("train").insertAdjacentHTML("beforeend", `<div class="tile guess">${pieceSvg(next)}</div>`);
+  chime(); animateO("oFace", "cheer");
+  oTurns++;
+  say("bubble", `I think ${next} comes next!`,
+    `I found the part that repeats: ${made.slice(0, k).join(", ")}. So next comes ${next}!`);
+  setTimeout(() => {
+    $("controls").querySelector("#askO")?.setAttribute("disabled", "");
+    const row = document.createElement("div");
+    row.className = "row"; row.style.marginTop = "10px";
+    row.innerHTML = `<button class="btn" type="button" id="again">Make another</button>${oTurns >= 2 ? '<button class="btn quiet" type="button" id="finish">I\'m done!</button>' : ""}`;
+    $("controls").innerHTML = ""; $("controls").appendChild(row);
+  }, 400);
+}
+
+function finish() {
+  const n = results.filter(Boolean).length;
+  store.set("shapesBest", Math.max(n, store.get("shapesBest", 0)));
+  confetti($("oFace"));
+  showWin({
+    title: "Pattern pro!",
+    text: "You found patterns, and O found yours too. Computers and AI love patterns: finding what repeats helps them guess what comes next.",
+    stars: results,
+    onAgain: () => { results = []; $("ph2").classList.remove("on"); $("ph1").classList.add("on"); $("progress").hidden = false; loadRound(0); },
+  });
+}
+
+// ===== BUTTONS =====
+$("controls").addEventListener("click", e => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.classList.contains("choice")) return pick(t);
+  if (t.dataset.color) { color = t.dataset.color; tone(500, .08); return paintMaker(); }
+  if (t.dataset.shape) {
+    if (made.length >= MAX_MADE) return;
+    made.push(color + " " + t.dataset.shape);
+    tone(440 + made.length * 40, .1);
+    return paintMaker();
+  }
+  if (t.id === "clearMade") { made = []; tone(250); return paintMaker(); }
+  if (t.id === "askO") return askO();
+  if (t.id === "again") { made = []; paintMaker(); return say("bubble", "Make another pattern!"); }
+  if (t.id === "finish") return finish();
+});
+$("train").addEventListener("click", e => {
+  const t = e.target.closest(".tile.remove");
+  if (!t) return;
+  made.splice(+t.dataset.i, 1); tone(300); paintMaker();
+});
+
+setupBar();
+loadRound(0);
+</script>
+</body>
+</html>

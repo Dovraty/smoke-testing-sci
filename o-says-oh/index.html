@@ -178,6 +178,7 @@
   .tag.code { background: var(--grape); }
   .tag.ai { background: var(--go); }
   .tag.sci { background: var(--gold); color: var(--plum); }
+  .tag.pat { background: var(--blush); color: var(--plum); }
   .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
   .game {
     background: var(--white); border-radius: 24px; padding: 12px; text-align: left;
@@ -402,6 +403,21 @@
         </div>
         <h3>O Reads Faces</h3>
         <p>Teach O feelings, then make faces.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="shelf">
+    <h2>Shapes &amp; colors <span class="tag pat">Patterns</span></h2>
+    <div class="games">
+      <a class="game" href="shapes.html">
+        <div class="art" style="background: #FDE3EC">
+          <div class="star-badge" id="shapesStars"></div>
+          <svg viewBox="0 0 120 40" style="position:absolute;left:12px;top:40px;width:120px;height:40px"><circle cx="18" cy="20" r="15" fill="#EF5A5A"/><rect x="40" y="6" width="28" height="28" rx="5" fill="#4AA3E8"/><circle cx="92" cy="20" r="15" fill="#EF5A5A"/><text x="114" y="31" font-family="Baloo 2, sans-serif" font-weight="800" font-size="30" fill="#8B52DB">?</text></svg>
+          <img class="o-mini" src="o.webp" alt="">
+        </div>
+        <h3>Shape Patterns</h3>
+        <p>What comes next? Then make your own.</p>
       </a>
     </div>
   </div>
@@ -702,6 +718,8 @@ function paintMenu() {
   badge("loopStars", loop.length && loop.length + "/5");
   badge("soundStars", sound && sound + "/6");
   badge("facesStars", faces && faces + "/4");
+  const shapes = store.get("shapesBest", 0);
+  badge("shapesStars", shapes && shapes + "/6");
 }
 
 // Returning kids skip the intro and land on the games menu.
