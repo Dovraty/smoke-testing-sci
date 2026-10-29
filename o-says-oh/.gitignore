@@ -1,0 +1,10 @@
+# Kokoro TTS model files (~350 MB) — re-download from
+# https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0
+assets/kokoro-v1.0.onnx
+assets/voices-v1.0.bin
+# render scratch
+build/prev_*.jpg
+build/m_*.png
+build/*chk*
+build/mouths.png
+build/mix.wav
